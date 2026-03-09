@@ -1,24 +1,10 @@
 import pandas as pd
-import requests
 import json
 import os
+from utils import call_api
 
+# API Key stored as OS variable
 api_key = os.environ["OPENWEATHER_API_KEY"]
-
-
-## Function to avoid redundent code and make API call function
-def call_api(url, params):
-
-    response = requests.get(url, params=params, timeout=10)
-    response.raise_for_status()
-    data = response.json()
-
-    # Catch ValueError
-    if not data:
-        raise ValueError(f"No results for {params.get(q)}")
-    
-    # Return JSON object
-    return data
 
 
 ## Function to get LAT and LON for a given city. Returned as a dictionary

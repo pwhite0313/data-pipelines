@@ -1,5 +1,4 @@
 import requests
-import json
 
 
 ## Function to avoid redundent code and make API call function
