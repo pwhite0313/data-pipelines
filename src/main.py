@@ -1,8 +1,16 @@
 import pandas as pd
 from api_client import get_lat_lon, call_and_append
 from plot import plot_weather
+import logging
+from logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 def main():
+
+    # Setup loggers per file
+    setup_logging()
+    logger.info("===Application started===")
 
     df = pd.DataFrame()
 

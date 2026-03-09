@@ -1,11 +1,14 @@
 import pandas as pd
 import json
 import os
+import logging
 from utils import call_api
 
 # API Key stored as OS variable
 api_key = os.environ["OPENWEATHER_API_KEY"]
 
+# Start a logger
+logger = logging.getLogger(__name__)
 
 ## Function to get LAT and LON for a given city. Returned as a dictionary
 def get_lat_lon(location) -> dict:
