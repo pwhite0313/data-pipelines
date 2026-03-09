@@ -14,14 +14,18 @@ def main():
         {"city": "Milan"}
     ]
 
-    for i in range(len(locations)):
-        print(get_lat_lon(locations[i]))
+    coords = []
 
     for i in range(len(locations)):
-        df = call_and_append(df, locations[i].get("city"))
-    print(df.head())
+       coords.append(get_lat_lon(locations[i]))
+    print(coords)
 
-    plot_weather(df)
+
+    # for i in range(len(locations)):
+    #     df = call_and_append(df, locations[i].get("city"))
+    # print(df.head())
+
+    # plot_weather(df)
 
 
 

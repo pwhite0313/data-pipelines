@@ -7,7 +7,7 @@ api_key = os.environ["OPENWEATHER_API_KEY"]
 
 
 ## Function to avoid redundent code and make API call function
-def call_api(params, url):
+def call_api(url, params):
 
     response = requests.get(url, params=params, timeout=10)
     response.raise_for_status()
@@ -40,7 +40,7 @@ def get_lat_lon(location) -> dict:
     url = "http://api.openweathermap.org/geo/1.0/direct"
 
     # Call API function and return JSON object
-    data = call_api(params, url)
+    data = call_api(url, params)
 
     # Pull Coordinates from response, include city to easier identify output
     coords = {
@@ -70,7 +70,7 @@ def call_and_append(df, city):
 
 
     # Call API function and return JSON object
-    data = call_api(params, url)
+    data = call_api(url, params)
 
     # Build new df from API
     new_df = pd.json_normalize(data["list"], sep="_")
@@ -84,3 +84,7 @@ def call_and_append(df, city):
 
     # Append and return
     return pd.concat([df, new_df], ignore_index=True)
+
+
+## Function to call API via lon and lat
+# def call_by_coords():
