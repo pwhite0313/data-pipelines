@@ -8,7 +8,7 @@ def main():
 
     locations = [
         {"city": "New York", "state": "NY", "country": "US"},
-        {"city": "Chicago", "state": "IL", "country": "US"},
+        {"city": "Chicago"},
         {"city": "Miami"},
         {"city": "London"},
         {"city": "Milan"}

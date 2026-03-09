@@ -6,6 +6,21 @@ import os
 api_key = os.environ["OPENWEATHER_API_KEY"]
 
 
+## Function to avoid redundent code and make API call function
+def call_api(params, url):
+
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    # Catch ValueError
+    if not data:
+        raise ValueError(f"No results for {params.get(q)}")
+    
+    # Return JSON object
+    return data
+
+
 ## Function to get LAT and LON for a given city. Returned as a dictionary
 def get_lat_lon(location) -> dict:
 
@@ -20,22 +35,12 @@ def get_lat_lon(location) -> dict:
         q_parts.append(country.strip().upper())
     
     
-    # API call
-    params = {
-        "q": ",".join(q_parts),
-        "limit": "1",
-        "appid": api_key
-    }
-    
+    # Variables to pass to api_call() function
+    params = {"q": ",".join(q_parts), "limit": "1", "appid": api_key}
     url = "http://api.openweathermap.org/geo/1.0/direct"
 
-    r = requests.get(url, params=params, timeout=10)
-    r.raise_for_status()
-    data = r.json()
-
-    # Catch ValueError
-    if not data:
-        raise ValueError(f"No results for {params.get(q)}")
+    # Call API function and return JSON object
+    data = call_api(params, url)
 
     # Pull Coordinates from response, include city to easier identify output
     coords = {
@@ -45,7 +50,6 @@ def get_lat_lon(location) -> dict:
     }
     
     return coords
-
 
 
 ## Function to call cities by name and return weather
@@ -60,18 +64,18 @@ def call_and_append(df, city):
         if city_check in set(existing_cities):
             return df
 
-    # API call
+    # Variables to pass to api_call() function
     params = {"q": city, "appid": api_key, "units": "imperial"}
     url = "https://api.openweathermap.org/data/2.5/forecast"
 
-    response = requests.get(url, params=params, timeout=10)
-    response.raise_for_status()
-    data = response.json()
+
+    # Call API function and return JSON object
+    data = call_api(params, url)
 
     # Build new df from API
     new_df = pd.json_normalize(data["list"], sep="_")
 
-    
+    # Normalize and clean JSON object
     df_weather = pd.json_normalize(new_df['weather'].str[0]).add_prefix("weather_")
     new_df = new_df.drop(columns=['weather']).join(df_weather)
 
