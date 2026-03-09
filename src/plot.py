@@ -1,5 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import logging
+
+logger = logging.getLogger(__name__)
 
 def plot_weather(df):
 # Plot for various cities
@@ -12,3 +15,7 @@ def plot_weather(df):
     plt.ylabel("Temperature (°F)")
     plt.legend(title="City")
     plt.show()
+
+    cities = df['city'].unique().tolist()
+
+    logger.info("Plot created for %s", cities)

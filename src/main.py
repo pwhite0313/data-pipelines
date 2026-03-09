@@ -29,11 +29,11 @@ def main():
     print(coords)
 
 
-    # for i in range(len(locations)):
-    #     df = call_and_append(df, locations[i].get("city"))
-    # print(df.head())
+    for i in range(len(locations)):
+        df = call_and_append(df, locations[i].get("city"))
+    print(df.head())
 
-    # plot_weather(df)
+    plot_weather(df)
 
 
 
