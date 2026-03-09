@@ -1,5 +1,14 @@
-.ipynb_checkpoints/
+# Logs
+logs/
+*.log
+
+# Python cache
 __pycache__/
 *.pyc
+
+# Virtual environments
+venv/
 .env
-.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/

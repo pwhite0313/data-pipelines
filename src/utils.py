@@ -1,4 +1,5 @@
 import requests
+from logging_config import setup_logging
 
 
 ## Function to avoid redundent code and make API call function
@@ -12,6 +13,8 @@ def call_api(url, params):
     # Catch ValueError
     if not data:
         raise ValueError(f"No results for {params.get(q)}")
-    
+        
+    setup_logging("API Call successful")
+
     # Return JSON object
     return data

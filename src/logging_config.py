@@ -1,4 +1,19 @@
+from pathlib import Path
 import logging
 
-logging.basicConfig(filename="/logs/app.log",
-                    level=logging.INFO)
+def setup_logging(message=None):
+
+    base_dir = Path(__file__).resolve().parent.parent
+    log_dir = base_dir / "logs"
+    log_dir.mkdir(exist_ok=True)
+
+    log_file = log_dir / "app.log"
+
+    logging.basicConfig(filename=log_file,
+                        level=logging.INFO,
+                        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    
+    logger = logging.getLogger(__name__)
+
+    if message:
+        logger.info(message)
