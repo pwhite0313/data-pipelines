@@ -2,6 +2,7 @@ import logging
 from logging_config import setup_logging
 from extract import extract_records
 from transform import transform_records
+from load import load_records
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +19,8 @@ def main():
     clean_records = transform_records(raw_records)
     logger.info("Transformed %s records", len(clean_records))
 
-    # output_path = load_records(clean_records)
-    # logger.info("Loaded records to %s", output_path)
+    output_path = load_records(clean_records)
+    logger.info("Loaded records to %s", output_path)
 
     logger.info("Pipeline completed successfully")
 
