@@ -18,8 +18,7 @@ def transform_records(data):
 
     # Add flattened city keys
     city_df = pd.json_normalize(data.get("city", {}), sep="_").add_prefix("city_")
-    for col in city_df.columns:
-        df[col] = city_df.iloc[0][col]
+    df = df.assign(**city_df.iloc[0].to_dict())
 
     # Append and return
     return df
