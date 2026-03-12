@@ -17,6 +17,7 @@ def get_json(url, params):
     if not response:
         raise ValueError(f"No results for {params.get(q)}")
 
+    logger.info("API Call successful")
     return response.json()
 
 

@@ -15,9 +15,8 @@ def main():
     raw_records = extract_records()
     logger.info("Extracted %s raw records", len(raw_records))
 
-    print(transform_records(raw_records))
-    # clean_records = transform_records(raw_records)
-    # logger.info("Transformed %s records", len(clean_records))
+    clean_records = transform_records(raw_records)
+    logger.info("Transformed %s records", len(clean_records))
 
     # output_path = load_records(clean_records)
     # logger.info("Loaded records to %s", output_path)
