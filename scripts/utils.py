@@ -16,5 +16,3 @@ RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 params = {"q": "New York", "appid": api_key, "units": "imperial"}
 endpoint = "https://api.openweathermap.org/data/2.5/forecast"
 
-print(RAW_DATA_DIR)
-
