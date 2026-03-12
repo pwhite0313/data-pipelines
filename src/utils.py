@@ -1,23 +1,14 @@
 import requests
 import logging
+import os
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
-## Function to avoid redundent code and make API call function
+# API Key stored as OS variable
+api_key = os.environ["OPENWEATHER_API_KEY"]
 
-def call_api(url, params):
-    logger.info("Calling API")
+# Variables to pass to api_call() function
+params = {"q": "New York", "appid": api_key, "units": "imperial"}
+endpoint = "https://api.openweathermap.org/data/2.5/forecast"
 
-    response = requests.get(url, params=params, timeout=10)
-    response.raise_for_status()
-    data = response.json()
-
-    # # Catch ValueError
-    if not data:
-        raise ValueError(f"No results for {params.get(q)}")
-    
-    logger.info("API call complete")
-
-    # Return JSON object
-    return data

@@ -1,8 +1,7 @@
-import pandas as pd
-from api_client import get_lat_lon, call_and_append
-from plot import plot_weather
 import logging
 from logging_config import setup_logging
+from extract import extract_records
+from transform import transform_records
 
 logger = logging.getLogger(__name__)
 
@@ -10,32 +9,20 @@ def main():
 
     # Setup loggers per file
     setup_logging()
-    logger.info("===Application started===")
 
-    df = pd.DataFrame()
+    logger.info("==Starting ingestion pipeline==")
 
-    locations = [
-        {"city": "New York", "state": "NY", "country": "US"},
-        {"city": "Chicago"},
-        {"city": "Miami"},
-        {"city": "London"},
-        {"city": "Milan"}
-    ]
+    raw_records = extract_records()
+    logger.info("Extracted %s raw records", len(raw_records))
 
-    coords = []
+    print(transform_records(raw_records))
+    # clean_records = transform_records(raw_records)
+    # logger.info("Transformed %s records", len(clean_records))
 
-    for i in range(len(locations)):
-       coords.append(get_lat_lon(locations[i]))
-    print(coords)
+    # output_path = load_records(clean_records)
+    # logger.info("Loaded records to %s", output_path)
 
-
-    for i in range(len(locations)):
-        df = call_and_append(df, locations[i].get("city"))
-    print(df.head())
-
-    plot_weather(df)
-
-
+    logger.info("Pipeline completed successfully")
 
 
 if __name__ == "__main__":
