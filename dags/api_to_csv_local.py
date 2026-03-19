@@ -21,16 +21,16 @@ def api_to_csv_local():
 
     @task
     def extract():
-        return extract_api_data()
+        return extract_records()
 
     @task
     def transform(raw_data):
-        return transform_data(raw_data)
+        return transform_records(raw_data)
 
     @task
     def load(clean_data):
         output_path = "/opt/airflow/data/output.csv"
-        save_csv(clean_data, output_path)
+        load_records(clean_data, output_path)
 
     raw = extract()
     clean = transform(raw)
