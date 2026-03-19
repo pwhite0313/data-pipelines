@@ -23,6 +23,7 @@ def main():
         raw_records = extract_records()
         logger.info("Extracted %s raw records", len(raw_records))
 
+        # Log empty response and exit
         if not raw_records:
             logger.warning("No records returned")
             return
