@@ -3,10 +3,10 @@ import time
 import sys
 import json
 
-from logging_config import setup_logging
-from extract import extract_records
-from transform import transform_records
-from load import load_records
+from src.logging_config import setup_logging
+from src.extract import extract_records
+from src.transform import transform_records
+from src.load import load_records
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 from datetime import datetime
-from utils import RAW_DATA_DIR
+from src.utils import RAW_DATA_DIR
 
 def load_records(records, output_path) -> str:
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")

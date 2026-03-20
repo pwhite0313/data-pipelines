@@ -29,8 +29,10 @@ def api_to_csv_local():
 
     @task
     def load(clean_data):
-        output_path = "/opt/airflow/data/output.csv"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = f"/opt/airflow/data/raw/output_{timestamp}.csv"
         load_records(clean_data, output_path)
+        return output_path
 
     raw = extract()
     clean = transform(raw)
