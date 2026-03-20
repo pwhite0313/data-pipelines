@@ -9,7 +9,6 @@ def setup_logging():
     log_file = log_dir / "app.log"
 
     logging.basicConfig(
-        filename=log_file,
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         force=True

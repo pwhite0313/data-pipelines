@@ -1,8 +1,13 @@
+import logging
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 ## Function to call cities by name and return weather
 def transform_records(data):
 
+    logger.info("Transformation started")
+    
     # Normalize as Pandas DF
     df = pd.json_normalize(data['list'], sep="_")
 
@@ -19,6 +24,8 @@ def transform_records(data):
     # Add flattened city keys
     city_df = pd.json_normalize(data.get("city", {}), sep="_").add_prefix("city_")
     df = df.assign(**city_df.iloc[0].to_dict())
+
+    logger.info(f"Transformed to Pandas DF of shape {df.shape}")
 
     # Append and return
     return df
