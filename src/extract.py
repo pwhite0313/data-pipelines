@@ -1,13 +1,17 @@
 import logging
 from src.client import get_json
-from src.utils import api_key, params, endpoint
+from src.utils import params, endpoint
 
 logger = logging.getLogger(__name__)
 
 def extract_records() -> list:
     logger.info("Started extraction")
 
-    data = get_json(endpoint, params)
+    try:
+        data = get_json(endpoint, params)
+    except Exception:
+        logger.exception("Extraction failed")
+        raise
 
-    logger.info(f"{len(data)} records extracted")
+    logger.info("%s records extracted", len(data))
     return data
