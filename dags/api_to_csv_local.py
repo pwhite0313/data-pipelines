@@ -4,6 +4,7 @@ from airflow.decorators import dag, task
 from src.extract import extract_records
 from src.transform import transform_records
 from src.load import load_records
+from src.logging_config import setup_logging
 
 
 @dag(
@@ -21,14 +22,17 @@ def api_to_csv_local():
 
     @task
     def extract():
+        setup_logging()
         return extract_records()
 
     @task
     def transform(raw_data):
+        setup_logging()
         return transform_records(raw_data)
 
     @task
     def load(clean_data):
+        setup_logging()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = f"/opt/airflow/data/raw/output_{timestamp}.csv"
         load_records(clean_data, output_path)
