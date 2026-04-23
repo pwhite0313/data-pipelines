@@ -13,6 +13,6 @@ def load_records(records, output_path) -> str:
     with open(output_path, "w", encoding="utf-8", newline="") as f:
         records.to_csv(f, index=False)
 
-    logger.info(f"{len(records)} loaded")
+    logger.info("%s loaded", len(records))
 
     return str(output_path)
