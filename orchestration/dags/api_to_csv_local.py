@@ -4,6 +4,7 @@ from airflow.decorators import dag, task
 from src.extract import extract_records
 from src.transform import transform_records
 from src.load import load_records
+from src.load_to_postgres import load_weather_csv_to_raw_table
 from src.logging_config import setup_logging
 
 
@@ -16,7 +17,7 @@ from src.logging_config import setup_logging
         "retries": 2,
         "retry_delay": timedelta(minutes=5),
     },
-    tags=["etl", "api", "csv"],
+    tags=["etl", "api", "csv", "postgres"],
 )
 def api_to_csv_local():
 
@@ -38,9 +39,21 @@ def api_to_csv_local():
         load_records(clean_data, output_path)
         return output_path
 
+    @task
+    def load_raw_table(file_path: str):
+        setup_logging()
+        context = get_current_context()
+        dag_run_id = context["dag_run"].run_id if context.get("dag_run") else None
+        return load_weather_csv_to_raw_table(
+            file_path=file_path,
+            dag_run_id=dag_run_id,
+            skip_if_loaded=True,
+        )
+
     raw = extract()
     clean = transform(raw)
     load(clean)
+    load_raw_table(file_path)
 
 
 dag = api_to_csv_local()
