@@ -9,6 +9,7 @@ __pycache__/
 # Virtual environments
 venv/
 .env
+airflow_venv
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/

@@ -1,7 +1,8 @@
 version: 2
 
 sources:
-  - name: weather_raw
+  - name: raw
+    database: weather_pipeline
     description: "Raw weather forecast snapshots loaded from timestamped Airflow CSV outputs."
     schema: raw
     tables:
