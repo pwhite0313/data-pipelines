@@ -9,7 +9,7 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
-from logging_config import setup_logging
+from src.logging_config import setup_logging
 
 
 RAW_SCHEMA = "raw"
@@ -91,8 +91,7 @@ def load_weather_csv_to_raw_table(
     df = pd.read_csv(path)
     logger.info("Rows read from CSV: %s", len(df))
 
-    # df = normalize_weather_dataframe(df)
-
+    ## Metadata from file
     df["source_file_name"] = source_file_name
     df["source_file_ts"] = source_file_ts
     df["ingested_at"] = datetime.now(timezone.utc).replace(tzinfo=None)

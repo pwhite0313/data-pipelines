@@ -4,7 +4,7 @@ from airflow.decorators import dag, task
 from src.extract import extract_records
 from src.transform import transform_records
 from src.load import load_records
-from src.load_to_postgres import load_weather_csv_to_raw_table
+from postgres.load_to_postgres import load_weather_csv_to_raw_table
 from src.logging_config import setup_logging
 
 
