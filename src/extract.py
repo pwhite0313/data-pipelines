@@ -15,12 +15,7 @@ def extract_records() -> list:
 
             response = get_json(endpoint, api_params)
 
-            records = response.get('list', [])
-
-            for record in records:
-                record["source_city"] = city
-
-            data.extend(records)
+            data.append(response)
         
     except Exception:
         logger.exception("Extraction failed")
