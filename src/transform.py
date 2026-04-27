@@ -3,15 +3,16 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-output_df = pd.DataFrame()
-
 def validate_response(data):
 
     if not isinstance(data, list):
-        raise ValueError("API response must be a dictionary")
+        raise ValueError("API response must be a list")
     
-    if "list" not in data:
-        raise ValueError("API response missing 'list' key")
+    if not isinstance(data[0], dict):
+        raise ValueError("Response expected to be flat list of dictionaries")
+    
+    if "source_city" not in data:
+        raise ValueError("Extract data does not contain source_city")
     
     if not isinstance(data["list"], list):
         raise ValueError("'list' must be a list inside the 'data' dictionary")
@@ -21,46 +22,46 @@ def validate_response(data):
 
 ## Function to call cities by name and return weather
 def transform_records(data):
-
+    
     logger.info("Transformation started")
 
-    # print(data)
-    
-    for record in data:
+    all_dfs = []
 
-        # try:
-        #     validate_response(record)
-        # except:
-        #     logger.exception("Validation failed")
-        #     raise
+    # try:
+    #     validate_response(data)
+    # except:
+    #     logger.exception("Validation failed")
+    #     raise
 
-        print(type(record['list']))
-        df = pd.json_normalize(record['list'], sep="_")
-        # print(df)
+    for response in data:
+        # Normalize forecast records
+        df = pd.json_normalize(response["list"], sep="_")
 
-    #     # Extract first weather object from list (API returns weather as a list of dicts)
-    #     # If missing or invalid, default to empty dict to avoid downstream errors
-    #     df["weather"] = df["weather"].apply(
-    #         lambda x: x[0] if isinstance(x, list) and len(x) > 0 else {}
-    #     )
+        # Normalize city metadata
+        city_df = pd.json_normalize(response["city"], sep="_").add_prefix("city_")
 
-    #     df_weather = pd.json_normalize(df["weather"]).add_prefix("weather_")
-    #     df = df.drop(columns=["weather"]).join(df_weather)
+        # Broadcast city metadata to all rows
+        for col in city_df.columns:
+            df[col] = city_df.iloc[0][col]
 
-    #     # Convert column to date_time
-    #     df["dt_txt"] = pd.to_datetime(df["dt_txt"], errors="coerce")
-    #     df = df.dropna(subset=["dt_txt"])
+        all_dfs.append(df)
 
-    #     city_data = record.get("city", {})
+    df = pd.concat(all_dfs, ignore_index=True)
 
-    #     if city_data:
-    #         # Add flattened city keys
-    #         city_df = pd.json_normalize(record.get("city", {}), sep="_").add_prefix("city_")
-    #         df = df.assign(**city_df.iloc[0].to_dict())
-        
-    #     output_df = pd.concat(df)
+    # Extract first weather object from list (API returns weather as a list of dicts)
+    # If missing or invalid, default to empty dict to avoid downstream errors
+    df["weather"] = df["weather"].apply(
+        lambda x: x[0] if isinstance(x, list) and len(x) > 0 else {}
+    )
 
-    # logger.info("Transformed to Pandas DF of shape: %s", output_df.shape)
+    df_weather = pd.json_normalize(df["weather"]).add_prefix("weather_")
+    df = df.drop(columns=["weather"]).join(df_weather)
 
-    # # Append and return
-    # return output_df
+    # Convert column to date_time
+    df["dt_txt"] = pd.to_datetime(df["dt_txt"], errors="coerce")
+    df = df.dropna(subset=["dt_txt"])
+
+    logger.info("Transformed to Pandas DF of shape: %s", df.shape)
+
+    # Append and return
+    return df

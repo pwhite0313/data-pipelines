@@ -11,7 +11,8 @@ def extract_records() -> list:
         data = []
 
         for city in cities:
-            api_params = ({'q': city, **params})
+            api_params = ({ **params,
+                           'q': city})
 
             response = get_json(endpoint, api_params)
 
