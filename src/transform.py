@@ -3,9 +3,11 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+output_df = pd.DataFrame()
+
 def validate_response(data):
 
-    if not isinstance(data, dict):
+    if not isinstance(data, list):
         raise ValueError("API response must be a dictionary")
     
     if "list" not in data:
@@ -21,36 +23,44 @@ def validate_response(data):
 def transform_records(data):
 
     logger.info("Transformation started")
+
+    # print(data)
     
-    try:
-        validate_response(data)
-    except:
-        logger.exception("Validation failed")
-        raise
+    for record in data:
 
-    df = pd.json_normalize(data['list'], sep="_")
+        # try:
+        #     validate_response(record)
+        # except:
+        #     logger.exception("Validation failed")
+        #     raise
 
-    # Extract first weather object from list (API returns weather as a list of dicts)
-    # If missing or invalid, default to empty dict to avoid downstream errors
-    df["weather"] = df["weather"].apply(
-        lambda x: x[0] if isinstance(x, list) and len(x) > 0 else {}
-    )
+        print(type(record['list']))
+        df = pd.json_normalize(record['list'], sep="_")
+        # print(df)
 
-    df_weather = pd.json_normalize(df["weather"]).add_prefix("weather_")
-    df = df.drop(columns=["weather"]).join(df_weather)
+    #     # Extract first weather object from list (API returns weather as a list of dicts)
+    #     # If missing or invalid, default to empty dict to avoid downstream errors
+    #     df["weather"] = df["weather"].apply(
+    #         lambda x: x[0] if isinstance(x, list) and len(x) > 0 else {}
+    #     )
 
-    # Convert column to date_time
-    df["dt_txt"] = pd.to_datetime(df["dt_txt"], errors="coerce")
-    df = df.dropna(subset=["dt_txt"])
+    #     df_weather = pd.json_normalize(df["weather"]).add_prefix("weather_")
+    #     df = df.drop(columns=["weather"]).join(df_weather)
 
-    city_data = data.get("city", {})
+    #     # Convert column to date_time
+    #     df["dt_txt"] = pd.to_datetime(df["dt_txt"], errors="coerce")
+    #     df = df.dropna(subset=["dt_txt"])
 
-    if city_data:
-        # Add flattened city keys
-        city_df = pd.json_normalize(data.get("city", {}), sep="_").add_prefix("city_")
-        df = df.assign(**city_df.iloc[0].to_dict())
+    #     city_data = record.get("city", {})
 
-    logger.info("Transformed to Pandas DF of shape: %s", df.shape)
+    #     if city_data:
+    #         # Add flattened city keys
+    #         city_df = pd.json_normalize(record.get("city", {}), sep="_").add_prefix("city_")
+    #         df = df.assign(**city_df.iloc[0].to_dict())
+        
+    #     output_df = pd.concat(df)
 
-    # Append and return
-    return df
+    # logger.info("Transformed to Pandas DF of shape: %s", output_df.shape)
+
+    # # Append and return
+    # return output_df

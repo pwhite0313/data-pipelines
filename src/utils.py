@@ -12,6 +12,9 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+# Passing multiple cities:
+cities = ['New York', 'Chicago', 'Los Angeles', 'Boston']
+
 # Variables to pass to api_call() function
 params = {"q": "New York", "appid": api_key, "units": "imperial"}
 endpoint = "https://api.openweathermap.org/data/2.5/forecast"

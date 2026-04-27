@@ -16,7 +16,7 @@ def main():
 
     # Setup loggers per file
     setup_logging()
-    logger.info("===Starting ingestion pipeline===")
+    logger.info("=== Starting ingestion pipeline ===")
 
     # Start API client and extract
     try:
@@ -39,7 +39,7 @@ def main():
         # Pipline run time
         elapsed = time.time() - start_time
 
-        logger.info("Pipeline completed successfully in %.2f seconds", elapsed)
+        logger.info("=== Pipeline completed successfully in %.2f second s===", elapsed)
 
     except Exception as e:
         logger.exception("Pipline failed: %s", e)
