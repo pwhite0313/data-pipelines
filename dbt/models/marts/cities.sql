@@ -1,2 +1,2 @@
 select distinct city_name
-FROM {{ ref('weather_source_prep') }}
+FROM {{ ref('stg_weather__forecast') }}

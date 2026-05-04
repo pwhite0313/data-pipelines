@@ -31,5 +31,4 @@ SELECT
     trim(weather_main)::text AS weather_main,
     trim(weather_description)::text AS weather_description,
     trim(weather_icon)::text
-FROM {{ ref('stg_weather_forecast') }}
-ORDER BY dt_utc
+FROM {{ source('raw', 'weather_forecast') }}
