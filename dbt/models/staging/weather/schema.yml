@@ -1,0 +1,150 @@
+version: 2
+
+models:
+  - name: stg_weather__forecast
+    description: >
+      Staging model for weather forecast data. Cleans and standardizes raw API data
+      from the raw weather_forecast source.
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+                - city_id
+                - dt_utc
+
+    columns:
+      - name: dt_utc
+        description: "Forecast timestamp normalized to UTC."
+        tests:
+          - not_null
+
+      - name: city_id
+        description: "Unique city identifier from the weather API."
+        tests:
+          - not_null
+
+      - name: local_dt
+        description: "Forecast timestamp as provided by the API text field."
+        tests:
+          - not_null
+
+      - name: city_name
+        description: "City name."
+        tests:
+          - not_null
+
+      - name: city_country
+        description: "Country code for the city."
+        tests:
+          - not_null
+
+      - name: main_temp
+        description: "Forecasted temperature."
+        tests:
+          - not_null
+
+      - name: main_feels_like
+        description: "Forecasted feels-like temperature."
+
+      - name: main_temp_min
+        description: "Minimum forecasted temperature."
+
+      - name: main_temp_max
+        description: "Maximum forecasted temperature."
+
+      - name: main_pressure
+        description: "Atmospheric pressure."
+
+      - name: main_sea_level
+        description: "Atmospheric pressure at sea level."
+
+      - name: main_grnd_level
+        description: "Atmospheric pressure at ground level."
+
+      - name: main_humidity
+        description: "Humidity percentage."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+      - name: main_temp_kf
+        description: "Internal temperature adjustment field from API."
+
+      - name: clouds_all
+        description: "Cloud coverage percentage."
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+      - name: visibility
+        description: "Visibility distance."
+
+      - name: pop
+        description: "Probability of precipitation."
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+
+      - name: wind_speed
+        description: "Wind speed."
+
+      - name: wind_deg
+        description: "Wind direction in degrees."
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 360
+
+      - name: wind_gust
+        description: "Wind gust speed."
+
+      - name: sys_pod
+        description: "Part of day indicator from API."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['d', 'n']
+
+      - name: rain_3h
+        description: "Rain volume over the previous 3 hours."
+
+      - name: city_population
+        description: "City population."
+
+      - name: city_timezone
+        description: "City timezone offset from UTC in seconds."
+
+      - name: city_sunrise
+        description: "City sunrise timestamp normalized to UTC."
+
+      - name: city_sunset
+        description: "City sunset timestamp normalized to UTC."
+
+      - name: city_coord_lat
+        description: "City latitude."
+
+      - name: city_coord_lon
+        description: "City longitude."
+
+      - name: weather_id
+        description: "Weather condition ID from API."
+
+      - name: weather_main
+        description: "High-level weather condition."
+        tests:
+          - not_null
+
+      - name: weather_description
+        description: "Detailed weather condition description."
+
+      - name: weather_icon
+        description: "Weather icon code from API."
