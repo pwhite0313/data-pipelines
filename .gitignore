@@ -1,3 +1,6 @@
+# dbt build artifacts
+target/
+
 # Logs
 logs/
 *.log
