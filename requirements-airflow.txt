@@ -1,0 +1,5 @@
+dbt-postgres==1.8.2
+requests
+pandas
+psycopg2-binary
+pydantic
