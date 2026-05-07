@@ -1,0 +1,122 @@
+version: '3.8'
+
+x-airflow-common: &airflow-common
+  build: .
+  env_file:
+    - .env
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-meta/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    PYTHONPATH: /opt/airflow
+    OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
+    WAREHOUSE_USER: ${WAREHOUSE_USER}
+    WAREHOUSE_PASSWORD: ${WAREHOUSE_PASSWORD}
+    WAREHOUSE_DB: ${WAREHOUSE_DB}
+    WAREHOUSE_HOST: ${WAREHOUSE_HOST}
+    WAREHOUSE_PORT: ${WAREHOUSE_PORT}
+  volumes:
+    - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
+    - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+    - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
+    - ${AIRFLOW_PROJ_DIR:-.}/src:/opt/airflow/src
+    - ${AIRFLOW_PROJ_DIR:-.}/dbt_project:/opt/airflow/dbt_project
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    postgres-meta:
+      condition: service_healthy
+    postgres-warehouse:
+      condition: service_healthy
+
+services:
+
+  postgres-meta:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+    volumes:
+      - postgres-meta-volume:/var/lib/postgresql/data
+
+  postgres-warehouse:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: weather_user
+      POSTGRES_PASSWORD: weather_pass
+      POSTGRES_DB: weather_db
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "weather_user"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+    volumes:
+      - postgres-warehouse-volume:/var/lib/postgresql/data
+
+  airflow-init:
+    <<: *airflow-common
+    user: "0:0"
+    depends_on:
+      postgres-meta:
+        condition: service_healthy
+      postgres-warehouse:
+        condition: service_healthy
+    command: >
+      bash -c "
+        mkdir -p /opt/airflow/{logs,dags,plugins,config} &&
+        chown -R ${AIRFLOW_UID:-50000}:0 /opt/airflow/ &&
+        airflow db migrate &&
+        airflow users create \
+          --username admin \
+          --password admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com
+      "
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-meta-volume:
+  postgres-warehouse-volume:

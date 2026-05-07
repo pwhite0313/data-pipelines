@@ -21,3 +21,9 @@ airflow_venv
 
 # Data output
 data/
+
+# Airflow-generated files
+airflow.db
+airflow.cfg
+webserver_config.py
+standalone_admin_password.txt
