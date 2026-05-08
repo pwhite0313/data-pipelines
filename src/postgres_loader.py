@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
 from src.logging_config import setup_logging
+from src.utils import RAW_DATA_DIR
 
 
 RAW_SCHEMA = "raw"
@@ -81,7 +82,7 @@ def file_already_loaded(engine: Engine, source_file_name: str) -> bool:
     return already_loaded
 
 
-def load_weather_csv_to_raw_table(
+def load_file(
     file_path: str,
     dag_run_id: str | None = None,
     skip_if_loaded: bool = True,
@@ -113,7 +114,6 @@ def load_weather_csv_to_raw_table(
     df = pd.read_csv(path)
     logger.info("Rows read from CSV: %s", len(df))
 
-    ## Metadata from file
     df["source_file_name"] = source_file_name
     df["source_file_ts"] = source_file_ts
     df["ingested_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -137,21 +137,46 @@ def load_weather_csv_to_raw_table(
     return message
 
 
+def load_all_files(dag_run_id: str | None = None) -> list[str]:
+    if dag_run_id == "":
+        dag_run_id = None
+
+    csv_files = sorted(RAW_DATA_DIR.glob("output_*.csv"))
+
+    if not csv_files:
+        raise FileNotFoundError(f"No output CSV files found in {RAW_DATA_DIR}")
+
+    results = []
+
+    for file_path in csv_files:
+        try:
+            logger.info("Loading file: %s", file_path)
+            result = load_file(file_path=str(file_path), dag_run_id=dag_run_id)
+            results.append(result)
+        except Exception:
+            logger.exception("Failed on file: %s", file_path)
+
+    return results
+
+
 if __name__ == "__main__":
     import argparse
 
-    logger.info("load_to_postgres.py started from CLI")
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("--file-path", required=True)
-    parser.add_argument("--dag-run-id", required=False, default=None)
+    subparsers = parser.add_subparsers(dest="command")
+
+    single = subparsers.add_parser("file", help="Load a single file")
+    single.add_argument("--file-path", required=True)
+    single.add_argument("--dag-run-id", required=False, default=None)
+
+    subparsers.add_parser("all", help="Load all files in data/raw")
 
     args = parser.parse_args()
 
-    result = load_weather_csv_to_raw_table(
-        file_path=args.file_path,
-        dag_run_id=args.dag_run_id,
-    )
-
-    logger.info("Result: %s", result)
-    print(result)
+    if args.command == "file":
+        print(load_file(file_path=args.file_path, dag_run_id=args.dag_run_id))
+    elif args.command == "all":
+        for r in load_all_files():
+            print(r)
+    else:
+        parser.print_help()

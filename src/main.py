@@ -7,7 +7,7 @@ from src.logging_config import setup_logging
 from src.extract import extract_records
 from src.transform import transform_records
 from src.load import load_records
-from src.postgres.extract_to_postgres import load_all_files
+from src.postgres_loader import load_all_files
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +35,6 @@ def main():
         output_path = load_records(clean_records)
         logger.info("Loaded records to %s", output_path)
 
-        # Extract from raw directory and move to postgrres
-        # TODO: Porcess only files not in DB -- Find unique key to overwrite
-        # -- Overwite prefered since weather data can be updated.
         
         dag_run_id = f"manual_{int(start_time)}"
         load_all_files(dag_run_id=dag_run_id)

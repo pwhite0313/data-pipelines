@@ -5,7 +5,7 @@ from airflow.operators.python import get_current_context
 from src.extract import extract_records
 from src.transform import transform_records
 from src.load import load_records
-from src.postgres.load_to_postgres import load_weather_csv_to_raw_table
+from src.postgres_loader import load_file as load_weather_csv_to_raw_table
 
 
 @dag(
