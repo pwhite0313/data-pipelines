@@ -53,25 +53,33 @@ def parse_source_file_ts(file_name: str) -> datetime:
     return datetime.strptime(ts_part, "%Y%m%d_%H%M%S")
 
 
+def ensure_raw_schema(engine: Engine) -> None:
+    with engine.begin() as conn:
+        conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {RAW_SCHEMA}"))
+
+
 def file_already_loaded(engine: Engine, source_file_name: str) -> bool:
     logger.info("Checking if file was already loaded: %s", source_file_name)
 
-    query = text(
-        f"""
-        SELECT 1
-        FROM {RAW_SCHEMA}.{RAW_TABLE}
-        WHERE source_file_name = :source_file_name
-        LIMIT 1
-        """
-    )
-
     with engine.connect() as conn:
-        result = conn.execute(query, {"source_file_name": source_file_name}).first()
+        table_exists = conn.execute(text("""
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = :schema AND table_name = :table
+            LIMIT 1
+        """), {"schema": RAW_SCHEMA, "table": RAW_TABLE}).first()
+
+        if not table_exists:
+            logger.info("Table does not exist yet — treating as not loaded")
+            return False
+
+        result = conn.execute(text(
+            f"SELECT 1 FROM {RAW_SCHEMA}.{RAW_TABLE} WHERE source_file_name = :source_file_name LIMIT 1"
+        ), {"source_file_name": source_file_name}).first()
 
     already_loaded = result is not None
     logger.info("File already loaded: %s", already_loaded)
-
     return already_loaded
+
 
 def load_weather_csv_to_raw_table(
     file_path: str,
@@ -89,6 +97,7 @@ def load_weather_csv_to_raw_table(
         raise FileNotFoundError(f"File not found: {file_path}")
 
     engine = get_engine()
+    ensure_raw_schema(engine)
     source_file_name = path.name
     source_file_ts = parse_source_file_ts(source_file_name)
 
