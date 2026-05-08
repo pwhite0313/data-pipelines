@@ -15,8 +15,6 @@ def main():
 
     start_time = time.time()
 
-    # Setup loggers per file
-    setup_logging()
     logger.info("=== Starting ingestion pipeline ===")
 
     # Start API client and extract
@@ -57,4 +55,5 @@ def main():
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()

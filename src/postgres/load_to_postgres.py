@@ -23,8 +23,21 @@ def get_engine() -> Engine:
     db_url = os.getenv("POSTGRES_DBT_URL") or os.getenv("DATABASE_URL")
 
     if not db_url:
-        logger.error("Missing database connection environment variable")
-        raise ValueError("Missing POSTGRES_DBT_URL or DATABASE_URL environment variable")
+        user = os.getenv("WAREHOUSE_USER")
+        password = os.getenv("WAREHOUSE_PASSWORD")
+        host = os.getenv("WAREHOUSE_HOST")
+        port = os.getenv("WAREHOUSE_PORT", "5432")
+        db = os.getenv("WAREHOUSE_DB")
+
+        if not all([user, password, host, db]):
+            logger.error("Missing one or more warehouse connection environment variables")
+            raise ValueError(
+                "Missing one or more warehouse connection environment variables: "
+                "WAREHOUSE_USER, WAREHOUSE_PASSWORD, WAREHOUSE_HOST, WAREHOUSE_DB"
+            )
+
+        db_url = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
+        logger.info("Built database URL from individual environment variables")
 
     logger.info("Creating database engine")
     return create_engine(db_url)

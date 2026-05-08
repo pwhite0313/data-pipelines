@@ -1,4 +1,4 @@
-FROM apache/airflow:2.9.2
+FROM apache/airflow:2.8.1
 
 USER airflow
 COPY requirements-airflow.txt .
