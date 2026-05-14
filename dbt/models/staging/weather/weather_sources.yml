@@ -8,3 +8,7 @@ sources:
     tables:
       - name: weather_forecast
         description: "Append-only raw forecast table populated from files like output_YYYYMMDD_HHMMSS.csv."
+        loaded_at_field: ingested_at
+        freshness:
+          warn_after: {count: 25, period: hour}
+          error_after: {count: 49, period: hour}

@@ -1,34 +1,45 @@
-SELECT 
-    to_timestamp(dt)::timestamptz AS dt_utc,
-    visibility::bigint AS visibility,
-    pop::numeric(18,2) AS pop,
-    dt_txt::timestamptz AS local_dt,
-    main_temp::numeric(18,2) AS main_temp,
-    main_feels_like::numeric(18,2) AS main_feels_like,
-    main_temp_min::numeric(18,2) AS main_temp_min,
-    main_temp_max::numeric(18,2) AS main_temp_max,
-    main_pressure::bigint AS main_pressure,
-    main_sea_level::bigint AS main_sea_level,
-    main_grnd_level::bigint AS main_grnd_level,
-    main_humidity::bigint AS main_humidity,
-    main_temp_kf::numeric(18,2) AS main_temp_kf,
-    clouds_all::bigint AS clouds_all,
-    wind_speed::numeric(18,2) AS wind_speed,
-    wind_deg::bigint AS wind_deg,
-    wind_gust::numeric(18,2) AS wind_gust,
-    trim(sys_pod)::text AS sys_pod,
-    rain_3h::numeric(18,2) AS rain_3h,
-    city_id::bigint AS city_id,
-    trim(city_name)::text AS city_name,
-    trim(city_country)::text AS city_country,
-    city_population::bigint AS city_population,
-    city_timezone::bigint AS city_timezone,
-    to_timestamp(city_sunrise)::timestamptz AS city_sunrise,
-    to_timestamp(city_sunset)::timestamptz AS city_sunset,
-    city_coord_lat::bigint AS city_coord_lat,
-    city_coord_lon::bigint AS city_coord_lon,
-    weather_id::bigint AS weather_id,
-    trim(weather_main)::text AS weather_main,
-    trim(weather_description)::text AS weather_description,
-    trim(weather_icon)::text
-FROM {{ source('raw', 'weather_forecast') }}
+WITH ranked AS (
+    SELECT
+        to_timestamp(dt)::timestamptz AS dt_utc,
+        visibility::bigint AS visibility,
+        pop::numeric(18,2) AS pop,
+        dt_txt::timestamptz AS local_dt,
+        main_temp::numeric(18,2) AS main_temp,
+        main_feels_like::numeric(18,2) AS main_feels_like,
+        main_temp_min::numeric(18,2) AS main_temp_min,
+        main_temp_max::numeric(18,2) AS main_temp_max,
+        main_pressure::bigint AS main_pressure,
+        main_sea_level::bigint AS main_sea_level,
+        main_grnd_level::bigint AS main_grnd_level,
+        main_humidity::bigint AS main_humidity,
+        main_temp_kf::numeric(18,2) AS main_temp_kf,
+        clouds_all::bigint AS clouds_all,
+        wind_speed::numeric(18,2) AS wind_speed,
+        wind_deg::bigint AS wind_deg,
+        wind_gust::numeric(18,2) AS wind_gust,
+        trim(sys_pod)::text AS sys_pod,
+        rain_3h::numeric(18,2) AS rain_3h,
+        city_id::bigint AS city_id,
+        trim(city_name)::text AS city_name,
+        trim(city_country)::text AS city_country,
+        city_population::bigint AS city_population,
+        city_timezone::bigint AS city_timezone,
+        to_timestamp(city_sunrise)::timestamptz AS city_sunrise,
+        to_timestamp(city_sunset)::timestamptz AS city_sunset,
+        city_coord_lat::bigint AS city_coord_lat,
+        city_coord_lon::bigint AS city_coord_lon,
+        weather_id::bigint AS weather_id,
+        trim(weather_main)::text AS weather_main,
+        trim(weather_description)::text AS weather_description,
+        trim(weather_icon)::text AS weather_icon,
+        ingested_at,
+        ROW_NUMBER() OVER (
+            PARTITION BY city_id::bigint, to_timestamp(dt)::timestamptz
+            ORDER BY ingested_at DESC
+        ) AS row_num
+    FROM {{ source('raw', 'weather_forecast') }}
+)
+
+SELECT * EXCEPT (row_num, ingested_at)
+FROM ranked
+WHERE row_num = 1
