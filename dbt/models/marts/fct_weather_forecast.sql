@@ -20,5 +20,9 @@ select
 from {{ ref('stg_weather__forecast') }}
 
 {% if is_incremental() %}
-    where local_dt > (select max(local_dt) from {{ this }})
+    where not exists (
+        select 1 from {{ this }} t
+        where t.city_id = city_id
+          and t.local_dt = local_dt
+    )
 {% endif %}
