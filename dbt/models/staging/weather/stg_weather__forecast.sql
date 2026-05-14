@@ -40,6 +40,38 @@ WITH ranked AS (
     FROM {{ source('raw', 'weather_forecast') }}
 )
 
-SELECT * EXCEPT (row_num, ingested_at)
+SELECT
+    dt_utc,
+    visibility,
+    pop,
+    local_dt,
+    main_temp,
+    main_feels_like,
+    main_temp_min,
+    main_temp_max,
+    main_pressure,
+    main_sea_level,
+    main_grnd_level,
+    main_humidity,
+    main_temp_kf,
+    clouds_all,
+    wind_speed,
+    wind_deg,
+    wind_gust,
+    sys_pod,
+    rain_3h,
+    city_id,
+    city_name,
+    city_country,
+    city_population,
+    city_timezone,
+    city_sunrise,
+    city_sunset,
+    city_coord_lat,
+    city_coord_lon,
+    weather_id,
+    weather_main,
+    weather_description,
+    weather_icon
 FROM ranked
 WHERE row_num = 1
