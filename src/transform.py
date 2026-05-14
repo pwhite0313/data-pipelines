@@ -3,35 +3,30 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-def validate_response(data):
+def validate_response(data: list) -> None:
+    if not isinstance(data, list) or len(data) == 0:
+        raise ValueError("API response must be a non-empty list")
 
-    if not isinstance(data, list):
-        raise ValueError("API response must be a list")
-    
-    if not isinstance(data[0], dict):
-        raise ValueError("Response expected to be flat list of dictionaries")
-    
-    if "source_city" not in data:
-        raise ValueError("Extract data does not contain source_city")
-    
-    if not isinstance(data["list"], list):
-        raise ValueError("'list' must be a list inside the 'data' dictionary")
-    
-    if "city" in data and not isinstance(data["city"], dict):
-        raise ValueError("'city', was found but is not a dictionary")
+    for i, item in enumerate(data):
+        if not isinstance(item, dict):
+            raise ValueError(f"Response item {i} must be a dict")
+        if "list" not in item or not isinstance(item["list"], list) or len(item["list"]) == 0:
+            raise ValueError(f"Response item {i} missing required 'list' field")
+        if "city" not in item or not isinstance(item["city"], dict):
+            raise ValueError(f"Response item {i} missing required 'city' field")
 
-## Function to call cities by name and return weather
+
 def transform_records(data):
-    
+
     logger.info("Transformation started")
 
     all_dfs = []
 
-    # try:
-    #     validate_response(data)
-    # except:
-    #     logger.exception("Validation failed")
-    #     raise
+    try:
+        validate_response(data)
+    except ValueError:
+        logger.exception("Validation failed")
+        raise
 
     for response in data:
         # Normalize forecast records
