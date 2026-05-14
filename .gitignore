@@ -2,6 +2,7 @@
 target/
 dbt_packages/
 package-lock.yml
+dbt/.user.yml
 
 # Logs
 logs/
