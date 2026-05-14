@@ -1,0 +1,70 @@
+version: 2
+
+models:
+  - name: fct_weather_forecast
+    description: >
+      Fact table for weather forecast data. Contains key analytical columns
+      for downstream consumption. Built incrementally from the staging model.
+
+    columns:
+      - name: local_dt
+        description: "Forecast timestamp as provided by the API."
+        tests:
+          - not_null
+
+      - name: city_id
+        description: "Unique city identifier from the weather API."
+        tests:
+          - not_null
+
+      - name: city_name
+        description: "City name."
+        tests:
+          - not_null
+
+      - name: city_country
+        description: "Country code for the city."
+        tests:
+          - not_null
+
+      - name: main_temp
+        description: "Forecasted temperature."
+        tests:
+          - not_null
+
+      - name: main_temp_min
+        description: "Minimum forecasted temperature."
+
+      - name: main_temp_max
+        description: "Maximum forecasted temperature."
+
+      - name: main_feels_like
+        description: "Forecasted feels-like temperature."
+
+      - name: main_humidity
+        description: "Humidity percentage."
+        tests:
+          - not_null
+
+      - name: clouds_all
+        description: "Cloud coverage percentage."
+
+      - name: rain_3h
+        description: "Rain volume over the previous 3 hours."
+
+      - name: wind_speed
+        description: "Wind speed."
+
+      - name: wind_gust
+        description: "Wind gust speed."
+
+      - name: weather_main
+        description: "High-level weather condition."
+        tests:
+          - not_null
+
+      - name: weather_description
+        description: "Detailed weather condition description."
+
+      - name: weather_id
+        description: "Weather condition ID from the API."
