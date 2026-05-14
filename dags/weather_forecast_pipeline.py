@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from airflow.decorators import dag, task
+from airflow.operators.bash import BashOperator
 from airflow.operators.python import get_current_context
 
 from src.extract import extract_records
@@ -9,7 +10,7 @@ from src.postgres_loader import load_file as load_weather_csv_to_raw_table
 
 
 @dag(
-    dag_id="api_to_csv_local",
+    dag_id="weather_forecast_pipeline",
     schedule="@daily",
     start_date=datetime(2026, 3, 1),
     catchup=False,
@@ -17,9 +18,9 @@ from src.postgres_loader import load_file as load_weather_csv_to_raw_table
         "retries": 2,
         "retry_delay": timedelta(minutes=5),
     },
-    tags=["etl", "api", "csv", "postgres"],
+    tags=["etl", "api", "csv", "postgres", "dbt"],
 )
-def api_to_csv_local():
+def weather_forecast_pipeline():
 
     @task
     def extract():
@@ -46,10 +47,20 @@ def api_to_csv_local():
             skip_if_loaded=True,
         )
 
+    dbt_run = BashOperator(
+        task_id="dbt_run",
+        bash_command="cd /opt/airflow/dbt && dbt run --profiles-dir /opt/airflow/dbt",
+    )
+
+    dbt_test = BashOperator(
+        task_id="dbt_test",
+        bash_command="cd /opt/airflow/dbt && dbt test --profiles-dir /opt/airflow/dbt",
+    )
+
     raw = extract()
     clean = transform(raw)
     file_path = load(clean)
-    load_raw_table(file_path)
+    load_raw_table(file_path) >> dbt_run >> dbt_test
 
 
-dag = api_to_csv_local()
+dag = weather_forecast_pipeline()
