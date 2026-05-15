@@ -47,6 +47,26 @@ def weather_forecast_pipeline():
             skip_if_loaded=True,
         )
 
+    @task
+    def validate_row_count(load_result: str):
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if load_result.startswith("Skipped"):
+            logger.info("File was already loaded — skipping row count check")
+            return
+
+        import re
+        match = re.search(r"Loaded (\d+) rows", load_result)
+        if not match:
+            raise ValueError(f"Unexpected load result format: {load_result}")
+
+        row_count = int(match.group(1))
+        logger.info("Rows loaded this run: %d", row_count)
+
+        if row_count == 0:
+            raise ValueError("Load task reported 0 rows — aborting before dbt run")
+
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command="cd /opt/airflow/dbt && dbt run --profiles-dir /opt/airflow/dbt",
@@ -60,7 +80,8 @@ def weather_forecast_pipeline():
     raw = extract()
     clean = transform(raw)
     file_path = load(clean)
-    load_raw_table(file_path) >> dbt_run >> dbt_test
+    load_result = load_raw_table(file_path)
+    validate_row_count(load_result) >> dbt_run >> dbt_test
 
 
 dag = weather_forecast_pipeline()
