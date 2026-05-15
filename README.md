@@ -68,7 +68,7 @@ weather_pipeline/
 │   ├── logging_config.py
 │   └── utils.py
 ├── docs/
-│   └── study_plan.md
+│   └── lineage.png                    # dbt lineage graph
 ├── config/
 │   └── airflow.cfg
 ├── docker-compose.yml
@@ -203,6 +203,18 @@ source venv/bin/activate
 cd dbt
 dbt run
 dbt test
+```
+
+### Lineage
+
+![dbt lineage graph](docs/lineage.png)
+
+`raw.weather_forecast` → `stg_weather__forecast` → `fct_weather_forecast`
+
+To regenerate docs:
+
+```bash
+docker compose exec airflow-scheduler bash -c "cd /opt/airflow/dbt && dbt docs generate --profiles-dir /opt/airflow/dbt"
 ```
 
 ---
