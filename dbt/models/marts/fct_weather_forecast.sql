@@ -1,4 +1,4 @@
-{{ config(materialized='incremental', unique_key=['city_id', 'local_dt']) }}
+{{ config(materialized='incremental', unique_key=['city_id', 'local_dt'], on_schema_change='append_new_columns') }}
 
 select
     local_dt,
