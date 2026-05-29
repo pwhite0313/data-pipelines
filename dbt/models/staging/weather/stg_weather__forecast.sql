@@ -3,7 +3,7 @@ WITH ranked AS (
         to_timestamp(dt)::timestamptz AS dt_utc,
         visibility::bigint AS visibility,
         pop::numeric(18,2) AS pop,
-        dt_txt::timestamptz AS local_dt,
+        dt_txt::TIMESTAMP AS local_dt,
         main_temp::numeric(18,2) AS main_temp,
         main_feels_like::numeric(18,2) AS main_feels_like,
         main_temp_min::numeric(18,2) AS main_temp_min,
