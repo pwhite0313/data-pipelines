@@ -12,6 +12,7 @@ select
     main_humidity,
     clouds_all,
     rain_3h,
+    snow_3h,
     wind_speed,
     wind_gust,
     weather_main,
