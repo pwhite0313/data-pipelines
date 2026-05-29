@@ -1,4 +1,7 @@
+import logging
+import re
 from datetime import datetime, timedelta
+
 from airflow.decorators import dag, task
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import get_current_context
@@ -7,6 +10,8 @@ from src.extract import extract_records
 from src.transform import transform_records
 from src.load import load_records
 from src.postgres_loader import load_file as load_weather_csv_to_raw_table
+
+DBT_DIR = "/opt/airflow/dbt"
 
 
 @dag(
@@ -49,14 +54,12 @@ def weather_forecast_pipeline():
 
     @task
     def validate_row_count(load_result: str):
-        import logging
         logger = logging.getLogger(__name__)
 
         if load_result.startswith("Skipped"):
             logger.info("File was already loaded — skipping row count check")
             return
 
-        import re
         match = re.search(r"Loaded (\d+) rows", load_result)
         if not match:
             raise ValueError(f"Unexpected load result format: {load_result}")
@@ -69,12 +72,12 @@ def weather_forecast_pipeline():
 
     dbt_run = BashOperator(
         task_id="dbt_run",
-        bash_command="cd /opt/airflow/dbt && dbt run --profiles-dir /opt/airflow/dbt",
+        bash_command=f"cd {DBT_DIR} && dbt run --profiles-dir {DBT_DIR}",
     )
 
     dbt_test = BashOperator(
         task_id="dbt_test",
-        bash_command="cd /opt/airflow/dbt && dbt test --profiles-dir /opt/airflow/dbt",
+        bash_command=f"cd {DBT_DIR} && dbt test --profiles-dir {DBT_DIR}",
     )
 
     raw = extract()
