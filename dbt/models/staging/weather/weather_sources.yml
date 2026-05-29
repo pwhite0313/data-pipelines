@@ -12,3 +12,28 @@ sources:
         freshness:
           warn_after: {count: 25, period: hour}
           error_after: {count: 49, period: hour}
+        columns:
+          - name: city_id
+            description: "Unique city identifier from the OpenWeatherMap API."
+          - name: city_name
+            description: "City name as returned by the API."
+          - name: city_country
+            description: "ISO country code for the city."
+          - name: dt
+            description: "Forecast Unix timestamp."
+          - name: dt_txt
+            description: "Forecast timestamp as a human-readable string."
+          - name: main_temp
+            description: "Forecasted temperature in Fahrenheit."
+          - name: main_humidity
+            description: "Forecasted humidity percentage."
+          - name: rain_3h
+            description: "Rain volume over the previous 3 hours. Null when no rain."
+          - name: snow_3h
+            description: "Snow volume over the previous 3 hours. Null when no snow."
+          - name: source_file_name
+            description: "Name of the CSV file this row was loaded from."
+          - name: ingested_at
+            description: "UTC timestamp of when this row was inserted into the raw table."
+          - name: dag_run_id
+            description: "Airflow DAG run ID that produced this row."
