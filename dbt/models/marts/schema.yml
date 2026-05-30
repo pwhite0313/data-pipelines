@@ -52,6 +52,9 @@ models:
       - name: rain_3h
         description: "Rain volume over the previous 3 hours."
 
+      - name: snow_3h
+        description: "Snow volume over the previous 3 hours. Null when no snow is forecasted."
+
       - name: wind_speed
         description: "Wind speed."
 
