@@ -6,6 +6,13 @@ models:
       Fact table for weather forecast data. Contains key analytical columns
       for downstream consumption. Built incrementally from the staging model.
 
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_id
+              - local_dt
+
     columns:
       - name: local_dt
         description: "Forecast timestamp as provided by the API."
