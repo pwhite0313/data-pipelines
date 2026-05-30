@@ -17,6 +17,8 @@ OpenWeatherMap API
         |
    Load to PostgreSQL (raw.weather_forecast)
         |
+   Validate row count
+        |
    dbt staging (staging.stg_weather__forecast)
         |
    dbt mart (analytics.fct_weather_forecast)
@@ -32,6 +34,7 @@ OpenWeatherMap API
 - dbt (dbt-postgres)
 - Docker / Docker Compose
 - pandas, SQLAlchemy, psycopg2
+- pytest
 
 ---
 
@@ -40,7 +43,7 @@ OpenWeatherMap API
 ```
 weather_pipeline/
 ├── dags/
-│   └── weather_forecast_pipeline.py  # Airflow DAG: extract → transform → load CSV → load Postgres → dbt
+│   └── weather_forecast_pipeline.py  # Airflow DAG: extract → transform → load CSV → load Postgres → validate → dbt
 ├── data/
 │   ├── raw/                           # CSV output files from each DAG run
 │   └── processed/
@@ -58,6 +61,8 @@ weather_pipeline/
 │   ├── profiles.yml
 │   ├── dbt_project.yml
 │   └── packages.yml
+├── tests/
+│   └── test_transform.py              # pytest unit tests for transform logic
 ├── src/
 │   ├── client.py                      # OpenWeatherMap API client
 │   ├── extract.py                     # Calls API and returns raw records
@@ -121,7 +126,7 @@ dbt staging model. Casts all columns to correct types, normalizes timestamps to 
 
 ### analytics.fct_weather_forecast
 dbt mart. Selects the key analytical columns for downstream consumption:
-`local_dt`, `city_name`, `city_country`, `city_id`, `main_temp`, `main_temp_min`, `main_temp_max`, `main_feels_like`, `main_humidity`, `clouds_all`, `rain_3h`, `wind_speed`, `wind_gust`, `weather_main`, `weather_description`, `weather_id`
+`local_dt`, `city_name`, `city_country`, `city_id`, `main_temp`, `main_temp_min`, `main_temp_max`, `main_feels_like`, `main_humidity`, `clouds_all`, `rain_3h`, `snow_3h`, `wind_speed`, `wind_gust`, `weather_main`, `weather_description`, `weather_id`
 
 ---
 
@@ -216,6 +221,19 @@ To regenerate docs:
 ```bash
 docker compose exec airflow-scheduler bash -c "cd /opt/airflow/dbt && dbt docs generate --profiles-dir /opt/airflow/dbt"
 ```
+
+---
+
+## Testing
+
+Unit tests cover the transform layer using pytest:
+
+```bash
+source venv/bin/activate
+python -m pytest tests/ -v
+```
+
+Tests validate `validate_response` (input shape, missing fields, wrong types) and `transform_records` (output schema, row count, city broadcast, bad date handling, weather field flattening).
 
 ---
 
