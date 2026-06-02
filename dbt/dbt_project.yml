@@ -34,6 +34,8 @@ models:
     staging:
       +materialized: view
       +schema: staging
+      +tags: ['staging']
     marts:
       +materialized: view
       +schema: analytics
+      +tags: ['marts']
