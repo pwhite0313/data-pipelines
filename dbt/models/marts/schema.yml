@@ -64,6 +64,8 @@ models:
 
       - name: wind_speed
         description: "Wind speed."
+        tests:
+          - not_null
 
       - name: wind_gust
         description: "Wind gust speed."
@@ -78,3 +80,5 @@ models:
 
       - name: weather_id
         description: "Weather condition ID from the API."
+        tests:
+          - not_null
