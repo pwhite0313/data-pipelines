@@ -70,6 +70,11 @@ def weather_forecast_pipeline():
         if row_count == 0:
             raise ValueError("Load task reported 0 rows — aborting before dbt run")
 
+    dbt_source_freshness = BashOperator(
+        task_id="dbt_source_freshness",
+        bash_command=f"cd {DBT_DIR} && dbt source freshness --profiles-dir {DBT_DIR}",
+    )
+
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command=f"cd {DBT_DIR} && dbt run --profiles-dir {DBT_DIR}",
@@ -84,7 +89,7 @@ def weather_forecast_pipeline():
     clean = transform(raw)
     file_path = load(clean)
     load_result = load_raw_table(file_path)
-    validate_row_count(load_result) >> dbt_run >> dbt_test
+    validate_row_count(load_result) >> dbt_source_freshness >> dbt_run >> dbt_test
 
 
 dag = weather_forecast_pipeline()
