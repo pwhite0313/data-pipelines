@@ -43,3 +43,7 @@ models:
       +materialized: view
       +schema: analytics
       +tags: ['marts']
+    reports:
+      +materialized: view
+      +schema: reports
+      +tags: ['reports']

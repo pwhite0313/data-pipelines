@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: rpt_current_conditions
+    description: >
+      Reporting model showing the most recent forecast for each tracked city.
+      One row per city. Designed for dashboard consumption. Built from
+      int_weather_enriched.
+
+    columns:
+      - name: city_id
+        description: "Unique city identifier."
+        tests:
+          - not_null
+          - unique
+
+      - name: city_name
+        description: "City name."
+        tests:
+          - not_null
+
+      - name: city_country
+        description: "ISO country code."
+        tests:
+          - not_null
+
+      - name: local_dt
+        description: "Timestamp of the most recent forecast for this city."
+        tests:
+          - not_null
+
+      - name: main_temp
+        description: "Temperature at the most recent forecast period (°F)."
+        tests:
+          - not_null
+
+      - name: main_feels_like
+        description: "Feels-like temperature (°F)."
+
+      - name: main_humidity
+        description: "Humidity percentage."
+
+      - name: wind_speed
+        description: "Wind speed (mph)."
+
+      - name: wind_gust
+        description: "Wind gust speed (mph)."
+
+      - name: clouds_all
+        description: "Cloud coverage percentage."
+
+      - name: rain_3h
+        description: "Rain volume over the previous 3 hours."
+
+      - name: snow_3h
+        description: "Snow volume over the previous 3 hours."
+
+      - name: weather_main
+        description: "High-level weather condition."
+
+      - name: weather_description
+        description: "Detailed weather condition description."
+
+      - name: pop
+        description: "Probability of precipitation (0-1)."
+
+      - name: temp_category
+        description: "Temperature category: freezing / cold / mild / warm / hot."
+
+      - name: wind_category
+        description: "Wind category: calm / light / moderate / strong / storm."
+
+      - name: precip_type
+        description: "Precipitation type: none / rain / snow / rain_and_snow."
