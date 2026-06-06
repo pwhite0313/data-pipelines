@@ -36,6 +36,69 @@ models:
       - name: city_coord_lon
         description: "City longitude."
 
+  - name: fct_weather_daily
+    description: >
+      Daily weather summary aggregated from 3-hour forecast intervals.
+      One row per city per forecast date. Built from fct_weather_forecast.
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - city_id
+              - forecast_date
+
+    columns:
+      - name: forecast_date
+        description: "Forecast date derived from the 3-hour interval timestamp."
+        tests:
+          - not_null
+
+      - name: city_id
+        description: "Unique city identifier."
+        tests:
+          - not_null
+
+      - name: city_name
+        description: "City name."
+        tests:
+          - not_null
+
+      - name: city_country
+        description: "ISO country code."
+        tests:
+          - not_null
+
+      - name: temp_min
+        description: "Minimum forecasted temperature across all 3-hour periods for the day."
+
+      - name: temp_max
+        description: "Maximum forecasted temperature across all 3-hour periods for the day."
+
+      - name: temp_avg
+        description: "Average forecasted temperature for the day."
+
+      - name: feels_like_avg
+        description: "Average feels-like temperature for the day."
+
+      - name: humidity_avg
+        description: "Average humidity percentage for the day."
+
+      - name: wind_speed_avg
+        description: "Average wind speed for the day."
+
+      - name: clouds_avg
+        description: "Average cloud coverage percentage for the day."
+
+      - name: total_rain
+        description: "Total rain volume across all 3-hour periods for the day."
+
+      - name: total_snow
+        description: "Total snow volume across all 3-hour periods for the day."
+
+      - name: forecast_periods
+        description: "Number of 3-hour forecast intervals that make up the daily aggregate."
+
   - name: fct_weather_forecast
     description: >
       Fact table for weather forecast data. Contains key analytical columns
