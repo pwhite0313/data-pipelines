@@ -121,6 +121,9 @@ models:
         description: "Unique city identifier from the weather API."
         tests:
           - not_null
+          - relationships:
+              to: ref('dim_city')
+              field: city_id
 
       - name: city_name
         description: "City name."
