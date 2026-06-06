@@ -1,6 +1,41 @@
 version: 2
 
 models:
+  - name: dim_city
+    description: >
+      Dimension table with one row per city. Contains static city metadata
+      sourced from the OpenWeatherMap API. Deduplicates by keeping the most
+      recent forecast record per city.
+
+    columns:
+      - name: city_id
+        description: "Unique city identifier from the OpenWeatherMap API."
+        tests:
+          - not_null
+          - unique
+
+      - name: city_name
+        description: "City name."
+        tests:
+          - not_null
+
+      - name: city_country
+        description: "ISO country code for the city."
+        tests:
+          - not_null
+
+      - name: city_population
+        description: "City population."
+
+      - name: city_timezone
+        description: "UTC offset in seconds."
+
+      - name: city_coord_lat
+        description: "City latitude."
+
+      - name: city_coord_lon
+        description: "City longitude."
+
   - name: fct_weather_forecast
     description: >
       Fact table for weather forecast data. Contains key analytical columns
