@@ -13,6 +13,20 @@ from src.postgres_loader import load_file as load_weather_csv_to_raw_table
 
 DBT_DIR = "/opt/airflow/dbt"
 
+logger = logging.getLogger(__name__)
+
+
+def on_failure_callback(context):
+    ti = context["task_instance"]
+    logger.error(
+        "TASK FAILED | dag: %s | task: %s | run_id: %s | execution_date: %s | error: %s",
+        ti.dag_id,
+        ti.task_id,
+        context.get("run_id"),
+        context.get("execution_date"),
+        context.get("exception"),
+    )
+
 
 @dag(
     dag_id="weather_forecast_pipeline",
@@ -22,6 +36,7 @@ DBT_DIR = "/opt/airflow/dbt"
     default_args={
         "retries": 2,
         "retry_delay": timedelta(minutes=5),
+        "on_failure_callback": on_failure_callback,
     },
     tags=["etl", "api", "csv", "postgres", "dbt"],
 )
