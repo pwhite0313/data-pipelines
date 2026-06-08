@@ -3,3 +3,4 @@ requests
 pandas
 psycopg2-binary
 pydantic
+apache-airflow-providers-postgres
