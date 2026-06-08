@@ -21,6 +21,15 @@ logger = logging.getLogger(__name__)
 
 
 def get_engine() -> Engine:
+    try:
+        from airflow.hooks.base import BaseHook
+        conn = BaseHook.get_connection("weather_warehouse")
+        db_url = f"postgresql+psycopg2://{conn.login}:{conn.password}@{conn.host}:{conn.port}/{conn.schema}"
+        logger.info("Built database URL from Airflow connection: weather_warehouse")
+        return create_engine(db_url)
+    except Exception:
+        logger.info("Airflow connection not available — falling back to environment variables")
+
     db_url = os.getenv("POSTGRES_DBT_URL") or os.getenv("DATABASE_URL")
 
     if not db_url:
