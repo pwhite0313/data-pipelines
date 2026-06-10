@@ -9,4 +9,15 @@ weather_pipeline:
       password: "{{ env_var('WAREHOUSE_PASSWORD') }}"
       schema: analytics
       threads: 4
-  target: dev
+
+    prod:
+      type: postgres
+      host: "{{ env_var('WAREHOUSE_HOST_PROD', env_var('WAREHOUSE_HOST')) }}"
+      port: "{{ env_var('WAREHOUSE_PORT_PROD', env_var('WAREHOUSE_PORT', '5432')) | int }}"
+      dbname: "{{ env_var('WAREHOUSE_DB_PROD', env_var('WAREHOUSE_DB')) }}"
+      user: "{{ env_var('WAREHOUSE_USER_PROD', env_var('WAREHOUSE_USER')) }}"
+      password: "{{ env_var('WAREHOUSE_PASSWORD_PROD', env_var('WAREHOUSE_PASSWORD')) }}"
+      schema: analytics
+      threads: 8
+
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
