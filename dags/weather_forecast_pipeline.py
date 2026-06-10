@@ -137,17 +137,17 @@ def weather_forecast_pipeline():
 
     dbt_source_freshness = BashOperator(
         task_id="dbt_source_freshness",
-        bash_command=f"cd {DBT_DIR} && dbt source freshness --profiles-dir {DBT_DIR}",
+        bash_command=f"cd {DBT_DIR} && dbt source freshness --profiles-dir {DBT_DIR} --target ${{DBT_TARGET:-dev}}",
     )
 
     dbt_run = BashOperator(
         task_id="dbt_run",
-        bash_command=f"cd {DBT_DIR} && dbt run --profiles-dir {DBT_DIR}",
+        bash_command=f"cd {DBT_DIR} && dbt run --profiles-dir {DBT_DIR} --target ${{DBT_TARGET:-dev}}",
     )
 
     dbt_test = BashOperator(
         task_id="dbt_test",
-        bash_command=f"cd {DBT_DIR} && dbt test --profiles-dir {DBT_DIR}",
+        bash_command=f"cd {DBT_DIR} && dbt test --profiles-dir {DBT_DIR} --target ${{DBT_TARGET:-dev}}",
     )
 
     raw = extract()
