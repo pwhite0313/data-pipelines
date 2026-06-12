@@ -168,6 +168,22 @@ docker compose up
 Airflow UI available at `http://localhost:8080` (admin / admin).
 The warehouse Postgres is available at `localhost:5432`.
 
+### Create the Airflow Connection
+
+After the containers are healthy, register the warehouse connection so Airflow can resolve credentials at runtime:
+
+```bash
+docker compose exec airflow-scheduler airflow connections add weather_warehouse \
+    --conn-type postgres \
+    --conn-host postgres-warehouse \
+    --conn-login weather_user \
+    --conn-password weather_pass \
+    --conn-schema weather_db \
+    --conn-port 5432
+```
+
+The `postgres_loader.py` module tries this connection first and falls back to the `.env` environment variables if the connection is not found — so the pipeline still works locally without Docker.
+
 ---
 
 ## Running the Pipeline
