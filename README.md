@@ -19,9 +19,21 @@ OpenWeatherMap API
         |
    Validate row count
         |
-   dbt staging (staging.stg_weather__forecast)
+   Volume anomaly check (7-run rolling average)
         |
-   dbt mart (analytics.fct_weather_forecast)
+   dbt source freshness
+        |
+   dbt staging      → staging.stg_weather__forecast
+        |
+   dbt intermediate → intermediate.int_weather_enriched
+        |
+   dbt marts        → analytics.dim_city
+                    → analytics.fct_weather_forecast  (incremental)
+                    → analytics.fct_weather_daily
+        |
+   dbt reports      → reports.rpt_current_conditions
+        |
+   dbt test
 ```
 
 ---
@@ -35,6 +47,7 @@ OpenWeatherMap API
 - Docker / Docker Compose
 - pandas, SQLAlchemy, psycopg2
 - pytest
+- GitHub Actions (CI)
 
 ---
 
@@ -42,8 +55,11 @@ OpenWeatherMap API
 
 ```
 weather_pipeline/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                     # GitHub Actions: pytest on push
 ├── dags/
-│   └── weather_forecast_pipeline.py  # Airflow DAG: extract → transform → load CSV → load Postgres → validate → dbt
+│   └── weather_forecast_pipeline.py   # Airflow DAG definition
 ├── data/
 │   ├── raw/                           # CSV output files from each DAG run
 │   └── processed/
@@ -51,18 +67,26 @@ weather_pipeline/
 │   ├── models/
 │   │   ├── staging/weather/
 │   │   │   ├── stg_weather__forecast.sql
-│   │   │   ├── schema.yml             # Column docs and dbt tests
+│   │   │   ├── schema.yml
 │   │   │   └── weather_sources.yml
-│   │   └── marts/
-│   │       ├── fct_weather_forecast.sql
-│   │       └── schema.yml
+│   │   ├── intermediate/
+│   │   │   └── int_weather_enriched.sql   # Temp, wind, and precip categories
+│   │   ├── marts/
+│   │   │   ├── dim_city.sql               # City dimension
+│   │   │   ├── fct_weather_forecast.sql   # Incremental 3-hour forecast fact
+│   │   │   ├── fct_weather_daily.sql      # Daily aggregate fact
+│   │   │   └── schema.yml
+│   │   └── reports/
+│   │       └── rpt_current_conditions.sql # Latest forecast per city
 │   ├── macros/
-│   │   └── generate_schema_name.sql   # Prevents dbt from prepending target schema
-│   ├── profiles.yml
+│   │   └── generate_schema_name.sql       # Prevents dbt from prepending target schema
+│   ├── profiles.yml                       # dev and prod targets
 │   ├── dbt_project.yml
 │   └── packages.yml
 ├── tests/
-│   └── test_transform.py              # pytest unit tests for transform logic
+│   ├── conftest.py                    # Shared pytest fixtures
+│   ├── test_transform.py              # Transform logic unit tests
+│   └── test_postgres_loader.py        # postgres_loader unit tests
 ├── src/
 │   ├── client.py                      # OpenWeatherMap API client
 │   ├── extract.py                     # Calls API and returns raw records
@@ -124,9 +148,21 @@ Loaded directly from CSV files by Airflow. Includes all raw API fields plus pipe
 ### staging.stg_weather__forecast
 dbt staging model. Casts all columns to correct types, normalizes timestamps to UTC, trims strings, and deduplicates by keeping the most recent ingestion for each `city_id` + `dt_utc` combination.
 
+### intermediate.int_weather_enriched
+Adds derived categorical columns on top of the staging model: `temp_category` (freezing / cold / mild / warm / hot), `wind_category` (calm / light / moderate / strong / storm), and `precip_type` (none / rain / snow / rain_and_snow).
+
+### analytics.dim_city
+City dimension table. One row per city, deduplicated using `ROW_NUMBER()` ordered by most recent forecast.
+
 ### analytics.fct_weather_forecast
-dbt mart. Selects the key analytical columns for downstream consumption:
-`local_dt`, `city_name`, `city_country`, `city_id`, `main_temp`, `main_temp_min`, `main_temp_max`, `main_feels_like`, `main_humidity`, `clouds_all`, `rain_3h`, `snow_3h`, `wind_speed`, `wind_gust`, `weather_main`, `weather_description`, `weather_id`
+Incremental 3-hour forecast fact table. Uses a `NOT EXISTS` anti-join on `(city_id, local_dt)` so new cities are ingested correctly without reprocessing existing rows.
+Columns: `local_dt`, `city_name`, `city_country`, `city_id`, `main_temp`, `main_temp_min`, `main_temp_max`, `main_feels_like`, `main_humidity`, `clouds_all`, `rain_3h`, `snow_3h`, `wind_speed`, `wind_gust`, `weather_main`, `weather_description`, `weather_id`
+
+### analytics.fct_weather_daily
+Daily aggregate fact. Rolls up the 3-hour forecasts to one row per `city_id` + calendar date: avg/min/max temp, avg humidity, avg wind speed, total rain and snow.
+
+### reports.rpt_current_conditions
+Reporting view. Returns the single most-recent forecast per city joined to all enriched columns from `int_weather_enriched`. Ready for BI tool consumption.
 
 ---
 
@@ -226,11 +262,15 @@ dbt run
 dbt test
 ```
 
+### Target switching (dev / prod)
+
+The `DBT_TARGET` environment variable controls which `profiles.yml` target is used. It defaults to `dev`. Set `DBT_TARGET=prod` in the Airflow environment (or CI) to run against the production warehouse.
+
 ### Lineage
 
 ![dbt lineage graph](docs/lineage.png)
 
-`raw.weather_forecast` → `stg_weather__forecast` → `fct_weather_forecast`
+`raw.weather_forecast` → `stg_weather__forecast` → `int_weather_enriched` → `fct_weather_forecast` / `fct_weather_daily` / `rpt_current_conditions`
 
 To regenerate docs:
 
@@ -242,14 +282,17 @@ docker compose exec airflow-scheduler bash -c "cd /opt/airflow/dbt && dbt docs g
 
 ## Testing
 
-Unit tests cover the transform layer using pytest:
-
 ```bash
 source venv/bin/activate
 python -m pytest tests/ -v
 ```
 
-Tests validate `validate_response` (input shape, missing fields, wrong types) and `transform_records` (output schema, row count, city broadcast, bad date handling, weather field flattening).
+Tests are split across two files:
+
+- `test_transform.py` — validates `validate_response` (input shape, missing fields, wrong types) and `transform_records` (output schema, row count, city broadcast, bad date handling, weather field flattening)
+- `test_postgres_loader.py` — validates `parse_source_file_ts` (valid filename, date/time parsing, full path, missing prefix, malformed timestamp)
+
+Shared fixtures live in `conftest.py`. The CI workflow in `.github/workflows/ci.yml` runs the full suite on every push and pull request to master.
 
 ---
 
