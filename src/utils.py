@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 # API Key stored as OS variable
-api_key = os.environ["OPENWEATHER_API_KEY"]
+api_key = os.getenv("OPENWEATHER_API_KEY")
 
 # Output path
 # Data directories
