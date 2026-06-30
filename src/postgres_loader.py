@@ -68,6 +68,36 @@ def ensure_raw_schema(engine: Engine) -> None:
         conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {RAW_SCHEMA}"))
 
 
+def align_columns_to_table(engine: Engine, df: pd.DataFrame) -> pd.DataFrame:
+    with engine.connect() as conn:
+        table_exists = conn.execute(text("""
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = :schema AND table_name = :table
+            LIMIT 1
+        """), {"schema": RAW_SCHEMA, "table": RAW_TABLE}).first()
+
+        if not table_exists:
+            return df
+
+        known_columns = {
+            row[0] for row in conn.execute(text("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_schema = :schema AND table_name = :table
+            """), {"schema": RAW_SCHEMA, "table": RAW_TABLE})
+        }
+
+    new_columns = [c for c in df.columns if c not in known_columns]
+    if new_columns:
+        logger.warning(
+            "Dropping %d unknown column(s) not present in %s.%s: %s — "
+            "run ALTER TABLE to start capturing this data",
+            len(new_columns), RAW_SCHEMA, RAW_TABLE, new_columns,
+        )
+        df = df.drop(columns=new_columns)
+
+    return df
+
+
 def file_already_loaded(engine: Engine, source_file_name: str) -> bool:
     logger.info("Checking if file was already loaded: %s", source_file_name)
 
@@ -128,6 +158,7 @@ def load_file(
     df["ingested_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
     df["dag_run_id"] = dag_run_id
 
+    df = align_columns_to_table(engine, df)
     logger.info("Writing rows to %s.%s", RAW_SCHEMA, RAW_TABLE)
 
     df.to_sql(
