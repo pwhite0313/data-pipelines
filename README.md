@@ -336,16 +336,24 @@ This was observed in practice when overlapping forecast data caused a uniqueness
 
 ## Known Limitations
 
-**Schema drift from optional API fields** — the `raw.weather_forecast` table schema is inferred from the first CSV loaded via pandas `to_sql`. The OpenWeatherMap API returns optional fields only when relevant (e.g., `snow_3h` only appears when snow is forecasted). If a new city is added and its first forecast contains a field not present in the original CSV, the load task will fail with:
+**Schema drift from new or optional API fields** — the `raw.weather_forecast` table schema is inferred from the first CSV loaded via pandas `to_sql`. When the OpenWeatherMap API returns a field not present in the original table (e.g., `snow_3h` when snow is first forecasted, or a newly added field like `main_dew_point`), the load task would previously fail with:
 
 ```
-psycopg2.errors.UndefinedColumn: column "snow_3h" of relation "weather_forecast" does not exist
+psycopg2.errors.UndefinedColumn: column "main_dew_point" of relation "weather_forecast" does not exist
 ```
 
-**Fix:** run the appropriate `ALTER TABLE` in the warehouse to add the missing column:
+**Current behavior** — `postgres_loader.py` now handles this gracefully. On each load, `align_columns_to_table` queries `information_schema` to compare the DataFrame columns against the actual table columns. Any unknown columns are dropped before the insert and a warning is logged:
+
+```
+WARNING - Dropping 1 unknown column(s) not present in raw.weather_forecast: ['main_dew_point'] — run ALTER TABLE to start capturing this data
+```
+
+The pipeline does not fail. The new field is ignored until a deliberate decision is made to capture it.
+
+**To approve a new column** — once the warning is observed in the Airflow logs, run the appropriate `ALTER TABLE` in the warehouse:
 
 ```sql
-ALTER TABLE raw.weather_forecast ADD COLUMN snow_3h numeric;
+ALTER TABLE raw.weather_forecast ADD COLUMN main_dew_point numeric;
 ```
 
-This was encountered in practice when adding cities like Denver and Toronto, which returned `snow_3h` data not present in the original New York / Chicago load. At production scale this pattern would be handled with explicit schema definitions (e.g., a migration tool like Alembic) or by enforcing a fixed schema at ingest time rather than inferring it from the data.
+The next DAG run will pick up the column automatically with no code changes required. At production scale this pattern would be replaced by a migration tool like Alembic that versions schema changes as auditable migration scripts.
