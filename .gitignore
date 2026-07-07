@@ -32,3 +32,6 @@ standalone_admin_password.txt
 # Testing
 testing.py
 .pytest_cache/
+
+# Editor
+.vscode/
