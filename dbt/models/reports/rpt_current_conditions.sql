@@ -1,33 +1,39 @@
 {{ config(materialized='view', schema='reports') }}
 
-with latest_per_city as (
-    select
-        city_id,
-        max(local_dt) as latest_dt
+with candidates as (
+    select *
     from {{ ref('int_weather_enriched') }}
-    group by city_id
+    where local_dt between now() - interval '4 hours' and now() + interval '4 hours'
+),
+
+ranked as (
+    select
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY city_id
+            ORDER BY ABS(EXTRACT(EPOCH FROM (local_dt - now())))
+        ) as rn
+    from candidates
 )
 
 select
-    e.local_dt,
-    e.city_id,
-    e.city_name,
-    e.city_country,
-    e.main_temp,
-    e.main_feels_like,
-    e.main_humidity,
-    e.wind_speed,
-    e.wind_gust,
-    e.clouds_all,
-    e.rain_3h,
-    e.snow_3h,
-    e.weather_main,
-    e.weather_description,
-    e.pop,
-    e.temp_category,
-    e.wind_category,
-    e.precip_type
-from {{ ref('int_weather_enriched') }} e
-inner join latest_per_city l
-    on e.city_id = l.city_id
-    and e.local_dt = l.latest_dt
+    local_dt,
+    city_id,
+    city_name,
+    city_country,
+    main_temp,
+    main_feels_like,
+    main_humidity,
+    wind_speed,
+    wind_gust,
+    clouds_all,
+    rain_3h,
+    snow_3h,
+    weather_main,
+    weather_description,
+    pop,
+    temp_category,
+    wind_category,
+    precip_type
+from ranked
+where rn = 1
