@@ -26,7 +26,7 @@ def get_engine() -> Engine:
         conn = BaseHook.get_connection("weather_warehouse")
         db_url = f"postgresql+psycopg2://{conn.login}:{conn.password}@{conn.host}:{conn.port}/{conn.schema}"
         logger.info("Built database URL from Airflow connection: weather_warehouse")
-        return create_engine(db_url)
+        return create_engine(db_url, connect_args={"sslmode": "require"})
     except Exception:
         logger.info("Airflow connection not available — falling back to environment variables")
 
@@ -49,8 +49,7 @@ def get_engine() -> Engine:
         db_url = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
         logger.info("Built database URL from individual environment variables")
 
-    logger.info("Creating database engine")
-    return create_engine(db_url)
+    return create_engine(db_url, connect_args={"sslmode": "require"})
 
 
 def parse_source_file_ts(file_name: str) -> datetime:
