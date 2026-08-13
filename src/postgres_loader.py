@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import os
 from pathlib import Path
 from datetime import datetime, timezone
@@ -50,6 +51,16 @@ def get_engine() -> Engine:
         logger.info("Built database URL from individual environment variables")
 
     return create_engine(db_url, connect_args={"sslmode": "require"})
+
+
+def _read_csv(file_path: str) -> pd.DataFrame:
+    if file_path.startswith("s3://"):
+        import boto3
+        parts = file_path[5:].split("/", 1)
+        bucket, key = parts[0], parts[1]
+        response = boto3.client("s3").get_object(Bucket=bucket, Key=key)
+        return pd.read_csv(io.BytesIO(response["Body"].read()))
+    return pd.read_csv(file_path)
 
 
 def parse_source_file_ts(file_name: str) -> datetime:
@@ -129,15 +140,17 @@ def load_file(
     logger.info("Input file path: %s", file_path)
     logger.info("DAG run ID: %s", dag_run_id)
 
-    path = Path(file_path)
+    is_s3 = file_path.startswith("s3://")
+    source_file_name = file_path.rsplit("/", 1)[-1]
 
-    if not path.exists():
-        logger.error("File not found: %s", file_path)
-        raise FileNotFoundError(f"File not found: {file_path}")
+    if not is_s3:
+        path = Path(file_path)
+        if not path.exists():
+            logger.error("File not found: %s", file_path)
+            raise FileNotFoundError(f"File not found: {file_path}")
 
     engine = get_engine()
     ensure_raw_schema(engine)
-    source_file_name = path.name
     source_file_ts = parse_source_file_ts(source_file_name)
 
     logger.info("Source file name: %s", source_file_name)
@@ -149,7 +162,7 @@ def load_file(
         return message
 
     logger.info("Reading CSV")
-    df = pd.read_csv(path)
+    df = _read_csv(file_path)
     logger.info("Rows read from CSV: %s", len(df))
 
     df["source_file_name"] = source_file_name
@@ -180,17 +193,29 @@ def load_all_files(dag_run_id: str | None = None) -> list[str]:
     if dag_run_id == "":
         dag_run_id = None
 
-    csv_files = sorted(RAW_DATA_DIR.glob("output_*.csv"))
+    bucket = os.getenv("S3_BUCKET")
 
-    if not csv_files:
-        raise FileNotFoundError(f"No output CSV files found in {RAW_DATA_DIR}")
+    if bucket:
+        import boto3
+        response = boto3.client("s3").list_objects_v2(Bucket=bucket, Prefix="raw/output_")
+        if "Contents" not in response:
+            raise FileNotFoundError(f"No output CSV files found in s3://{bucket}/raw/")
+        file_paths = sorted([
+            f"s3://{bucket}/{obj['Key']}"
+            for obj in response["Contents"]
+            if obj["Key"].endswith(".csv")
+        ])
+    else:
+        csv_files = sorted(RAW_DATA_DIR.glob("output_*.csv"))
+        if not csv_files:
+            raise FileNotFoundError(f"No output CSV files found in {RAW_DATA_DIR}")
+        file_paths = [str(f) for f in csv_files]
 
     results = []
-
-    for file_path in csv_files:
+    for file_path in file_paths:
         try:
             logger.info("Loading file: %s", file_path)
-            result = load_file(file_path=str(file_path), dag_run_id=dag_run_id)
+            result = load_file(file_path=file_path, dag_run_id=dag_run_id)
             results.append(result)
         except Exception:
             logger.exception("Failed on file: %s", file_path)

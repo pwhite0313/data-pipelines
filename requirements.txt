@@ -57,3 +57,4 @@ urllib3==2.6.3
 zipp==3.23.1
 pytest
 python-dotenv==1.2.2
+boto3
