@@ -17,6 +17,14 @@ from src.utils import RAW_DATA_DIR
 RAW_SCHEMA = "raw"
 RAW_TABLE = "weather_forecast"
 
+# Fields the API only includes conditionally (e.g. snow_3h is absent from the
+# response entirely when no city has snow in the forecast). If the first CSV
+# ever loaded happens to lack one of these, pandas' to_sql would infer a table
+# schema missing the column — so we force it present (as null) on every load.
+KNOWN_OPTIONAL_COLUMNS = {
+    "snow_3h": "float64",
+}
+
 setup_logging()
 logger = logging.getLogger(__name__)
 
@@ -27,7 +35,7 @@ def get_engine() -> Engine:
         conn = BaseHook.get_connection("weather_warehouse")
         db_url = f"postgresql+psycopg2://{conn.login}:{conn.password}@{conn.host}:{conn.port}/{conn.schema}"
         logger.info("Built database URL from Airflow connection: weather_warehouse")
-        return create_engine(db_url, connect_args={"sslmode": "require"})
+        return create_engine(db_url, connect_args={"sslmode": "prefer"})
     except Exception:
         logger.info("Airflow connection not available — falling back to environment variables")
 
@@ -50,7 +58,7 @@ def get_engine() -> Engine:
         db_url = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
         logger.info("Built database URL from individual environment variables")
 
-    return create_engine(db_url, connect_args={"sslmode": "require"})
+    return create_engine(db_url, connect_args={"sslmode": "prefer"})
 
 
 def _read_csv(file_path: str) -> pd.DataFrame:
@@ -169,6 +177,10 @@ def load_file(
     df["source_file_ts"] = source_file_ts
     df["ingested_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
     df["dag_run_id"] = dag_run_id
+
+    for column, dtype in KNOWN_OPTIONAL_COLUMNS.items():
+        if column not in df.columns:
+            df[column] = pd.Series([None] * len(df), dtype=dtype)
 
     df = align_columns_to_table(engine, df)
     logger.info("Writing rows to %s.%s", RAW_SCHEMA, RAW_TABLE)
