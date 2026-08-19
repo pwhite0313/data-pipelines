@@ -53,7 +53,7 @@ services:
       POSTGRES_PASSWORD: weather_pass
       POSTGRES_DB: weather_db
     ports:
-      - "5432:5432"
+      - "${WAREHOUSE_HOST_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "weather_user", "-d", "weather_db"]
       interval: 10s
@@ -76,14 +76,16 @@ services:
         mkdir -p /opt/airflow/{logs,dags,plugins,config} &&
         chown -R 1000:0 /opt/airflow/ &&
         airflow db migrate &&
-        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com &&
+        cd /opt/airflow/dbt && dbt deps --profiles-dir /opt/airflow/dbt &&
+        chown -R 1000:0 /opt/airflow/dbt/dbt_packages
       "
 
   airflow-webserver:
     <<: *airflow-common
     command: webserver
     ports:
-      - "8080:8080"
+      - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
