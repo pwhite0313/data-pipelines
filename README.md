@@ -269,7 +269,7 @@ Shared fixtures live in `conftest.py`. The CI workflow in `.github/workflows/ci.
 
 ## Known Limitations
 
-**Schema drift from new or optional API fields** — the `raw.weather_forecast` table schema is inferred from the first CSV loaded via pandas `to_sql`. When the OpenWeatherMap API returns a field not present in the original table (e.g., `snow_3h` when snow is first forecasted, or a newly added field like `main_dew_point`), the load task would previously fail with:
+**Schema drift from newly added API fields** — the `raw.weather_forecast` table schema is inferred from the first CSV loaded via pandas `to_sql`. When the OpenWeatherMap API returns a field not present in the original table (e.g., a newly added field like `main_dew_point`), the load task would previously fail with:
 
 ```
 psycopg2.errors.UndefinedColumn: column "main_dew_point" of relation "weather_forecast" does not exist
@@ -290,6 +290,8 @@ ALTER TABLE raw.weather_forecast ADD COLUMN main_dew_point numeric;
 ```
 
 The next DAG run will pick up the column automatically with no code changes required. At production scale this pattern would be replaced by a migration tool like Alembic that versions schema changes as auditable migration scripts.
+
+**Conditionally-absent known fields** — a separate case from schema drift: `snow_3h` is only present in the API response at all when some city has snow in the forecast, so a snow-free first load would infer a table with no `snow_3h` column, breaking the dbt staging model which selects it unconditionally. `postgres_loader.py` guards against this via `KNOWN_OPTIONAL_COLUMNS` — such fields are forced onto the DataFrame as null before every load if the source CSV doesn't include them, so the table always has the column from the first insert onward, regardless of the day's weather.
 
 ---
 
@@ -345,6 +347,8 @@ docker compose up
 Airflow UI available at `http://localhost:8080` (admin / admin).
 The warehouse Postgres is available at `localhost:5432`.
 
+If either port is already in use, set `AIRFLOW_WEBSERVER_PORT` / `WAREHOUSE_HOST_PORT` in `.env` to remap the host side only — internal service-to-service traffic is unaffected.
+
 ### Create the Airflow Connection
 
 After the containers are healthy, register the warehouse connection so Airflow can resolve credentials at runtime:
@@ -356,6 +360,18 @@ docker compose exec airflow-scheduler airflow connections add weather_warehouse 
     --conn-login weather_user \
     --conn-password weather_pass \
     --conn-schema weather_db \
+    --conn-port 5432
+```
+
+On Windows PowerShell, use a backtick instead of `\` for line continuation:
+
+```powershell
+docker compose exec airflow-scheduler airflow connections add weather_warehouse `
+    --conn-type postgres `
+    --conn-host postgres-warehouse `
+    --conn-login weather_user `
+    --conn-password weather_pass `
+    --conn-schema weather_db `
     --conn-port 5432
 ```
 
@@ -399,9 +415,12 @@ dbt runs automatically as part of the Airflow DAG. To run manually:
 ```bash
 source venv/bin/activate
 cd dbt
+dbt deps
 dbt run
 dbt test
 ```
+
+`dbt deps` installs the packages listed in `packages.yml` into `dbt_packages/` (gitignored) — required once before the first `dbt run`/`dbt test`/`dbt source freshness`, and again after `packages.yml` changes.
 
 ### Target switching (dev / prod)
 
