@@ -158,6 +158,7 @@ weather_pipeline/
 ├── Dockerfile
 ├── requirements.txt                   # Pipeline dependencies
 ├── requirements-airflow.txt           # Airflow dependencies
+├── .env.example                       # Template for required environment variables
 └── .env                               # Local environment variables (not committed)
 ```
 
@@ -329,7 +330,11 @@ The 320 rows were patched directly in `raw.weather_forecast` using a CTE UPDATE 
 
 ### Environment Variables
 
-Create a `.env` file in the project root:
+Copy `.env.example` to `.env` and fill in real values:
+
+```bash
+cp .env.example .env
+```
 
 ```
 OPENWEATHER_API_KEY=your_api_key_here
