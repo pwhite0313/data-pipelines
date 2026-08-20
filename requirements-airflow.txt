@@ -1,6 +1,25 @@
-dbt-postgres==1.8.2
+# dbt-core/dbt-postgres match requirements.txt's pins exactly (1.11.8),
+# since dbt/models/marts/schema.yml uses the `arguments:` generic-test
+# syntax introduced in dbt-core 1.9 — anything older fails with
+# "macro ... takes no keyword argument 'arguments'". Requires Python >=3.9
+# (see the Dockerfile's -python3.11 base image tag).
+#
+# Do NOT pin dbt-adapters/dbt-common/dbt-extractor/dbt-protos/
+# dbt-semantic-interfaces here even though requirements.txt does — those
+# are transitive deps of dbt-core/dbt-postgres, and Airflow's base image
+# already has its own dependency graph installed (this file's install is a
+# SEPARATE pip run on top of it, not a combined resolution). Pinning the
+# siblings to requirements.txt's exact versions over-constrains pip and
+# produces a hard ResolutionImpossible; leaving them unpinned lets pip
+# upgrade only what's needed and succeed (with a harmless warning about
+# opentelemetry-proto/protobuf — Airflow has no OTel exporter configured
+# here, so this doesn't affect actual functionality).
+#
+# apache-airflow-providers-postgres is intentionally NOT listed here — see
+# the Dockerfile, it's installed in its own separate step before this file.
+dbt-postgres==1.10.0
+dbt-core==1.11.8
 requests
 pandas
 psycopg2-binary
 pydantic
-apache-airflow-providers-postgres
