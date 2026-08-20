@@ -293,6 +293,8 @@ The next DAG run will pick up the column automatically with no code changes requ
 
 **Conditionally-absent known fields** — a separate case from schema drift: `snow_3h` is only present in the API response at all when some city has snow in the forecast, so a snow-free first load would infer a table with no `snow_3h` column, breaking the dbt staging model which selects it unconditionally. `postgres_loader.py` guards against this via `KNOWN_OPTIONAL_COLUMNS` — such fields are forced onto the DataFrame as null before every load if the source CSV doesn't include them, so the table always has the column from the first insert onward, regardless of the day's weather.
 
+**dbt-core and apache-airflow-providers-postgres must stay pinned in requirements-airflow.txt** — `dbt/models/marts/schema.yml` uses the `arguments:` generic-test syntax (dbt-core >=1.9), so `requirements-airflow.txt` pins `dbt-core==1.11.8`/`dbt-postgres==1.10.0` to match `requirements.txt` (the local, no-Docker venv path) exactly. Left unpinned, a fresh build can resolve an incompatible dbt-core (too old for the test syntax, or a pre-release) purely based on whatever's newest on PyPI that day — this has broken from-scratch builds before without anyone noticing, since Docker layer caching usually reused an old, working resolution. `apache-airflow-providers-postgres` is pinned to `5.10.0` in its own separate `RUN` step in the `Dockerfile` for the same reason (left unpinned, it resolves a release built for Airflow 3.x) and to avoid pip backtracking for a very long time when resolved together with the dbt pins. See the comments in `Dockerfile` and `requirements-airflow.txt` before changing any of these.
+
 ---
 
 ## Incident Log

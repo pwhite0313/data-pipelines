@@ -1,3 +1,7 @@
+# For the local venv (no Docker/Airflow) path only. dbt-core here can run
+# newer than requirements-airflow.txt's pin, since this environment has no
+# Airflow install to conflict with on protobuf. See requirements-airflow.txt
+# for why the Docker image is capped to an older dbt-core.
 agate==1.9.1
 annotated-types==0.7.0
 attrs==26.1.0
