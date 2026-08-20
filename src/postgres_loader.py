@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import os
+import re
 from pathlib import Path
 from datetime import datetime, timezone
 import logging
@@ -74,11 +75,11 @@ def _read_csv(file_path: str) -> pd.DataFrame:
 def parse_source_file_ts(file_name: str) -> datetime:
     stem = Path(file_name).stem
 
-    if not stem.startswith("output_"):
+    match = re.match(r"output_(\d{8}_\d{6})", stem)
+    if not match:
         raise ValueError(f"Unexpected file name format: {file_name}")
 
-    ts_part = stem.replace("output_", "", 1)
-    return datetime.strptime(ts_part, "%Y%m%d_%H%M%S")
+    return datetime.strptime(match.group(1), "%Y%m%d_%H%M%S")
 
 
 def ensure_raw_schema(engine: Engine) -> None:

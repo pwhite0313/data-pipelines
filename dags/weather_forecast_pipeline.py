@@ -1,5 +1,6 @@
 import logging
 import re
+import uuid
 from datetime import datetime, timedelta
 
 from airflow.decorators import dag, task
@@ -53,7 +54,7 @@ def weather_forecast_pipeline():
     @task
     def load(clean_data):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = f"/opt/airflow/data/raw/output_{timestamp}.csv"
+        output_path = f"/opt/airflow/data/raw/output_{timestamp}_{uuid.uuid4().hex[:8]}.csv"
         load_records(clean_data, output_path)
         return output_path
 

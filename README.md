@@ -326,7 +326,7 @@ The 320 rows were patched directly in `raw.weather_forecast` using a CTE UPDATE 
 
 ### Prerequisites
 - Docker and Docker Compose
-- OpenWeatherMap API key
+- OpenWeatherMap API key — sign up free at [openweathermap.org/api](https://openweathermap.org/api) (the free tier covers this pipeline's 5-day/3-hour forecast calls). New keys can take up to a couple hours to activate.
 
 ### Environment Variables
 
@@ -345,6 +345,14 @@ WAREHOUSE_HOST=postgres-warehouse
 WAREHOUSE_PORT=5432
 ```
 
+Also set `AIRFLOW_UID` to your host user's UID, so files the containers create (logs, dbt artifacts, raw CSVs) end up owned by you instead of a fixed container UID — this is Airflow's own documented setup step, not specific to this repo:
+
+```bash
+echo "AIRFLOW_UID=$(id -u)" >> .env
+```
+
+If you skip this, everything still runs — `airflow-init` falls back to UID `50000` — but `data/`, `logs/`, and dbt's `target/`/`dbt_packages/` directories will end up owned by that UID on your host, and you'll need `sudo chown` to edit files under them afterward. `dags/`, `src/`, and the rest of `dbt/` are left alone either way.
+
 ### Start Airflow
 
 ```bash
@@ -355,6 +363,14 @@ Airflow UI available at `http://localhost:8080` (admin / admin).
 The warehouse Postgres is available at `localhost:5432`.
 
 If either port is already in use, set `AIRFLOW_WEBSERVER_PORT` / `WAREHOUSE_HOST_PORT` in `.env` to remap the host side only — internal service-to-service traffic is unaffected.
+
+Airflow pauses every DAG on creation by default (`AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION`), so nothing — including a fresh deploy of this pipeline — runs unattended before a human enables it. `weather_forecast_pipeline` will sit `queued` if triggered until you unpause it:
+
+```bash
+docker compose exec airflow-scheduler airflow dags unpause weather_forecast_pipeline
+```
+
+(Same command for any new DAG you add — swap in its `dag_id`.)
 
 ### Create the Airflow Connection
 
