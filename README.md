@@ -1,6 +1,6 @@
 # Weather Data ELT Pipeline
 
-Production-style ELT pipeline that ingests live weather forecast data from the OpenWeatherMap REST API across 15 global cities, validates and transforms it using dbt, and delivers analytics-ready dimensional models through a fully automated workflow built with Python, Apache Airflow, PostgreSQL, Docker, and GitHub Actions. Deployed on AWS (RDS, S3, EC2).
+Production-style ELT pipeline that ingests live weather forecast data from the OpenWeatherMap REST API across 15 global cities, validates and transforms it using dbt, and delivers analytics-ready dimensional models through a fully automated workflow built with Python, Apache Airflow, PostgreSQL, Docker, and GitHub Actions.
 
 Designed, implemented, tested, documented, and maintained end to end.
 
@@ -18,7 +18,7 @@ Designed, implemented, tested, documented, and maintained end to end.
 - **CI/CD via GitHub Actions** — Automated pytest suite runs on every push to master
 - **19 pytest unit tests** — Validates transform logic, schema enforcement, and file timestamp parsing
 - **Structured logging** — Python `logging` module throughout the ingestion layer; Airflow task logs capture full run context including `dag_run_id`
-- **Dockerized deployment** — Airflow and PostgreSQL run in isolated containers via Docker Compose; deployed to AWS EC2
+- **Dockerized deployment** — Airflow and PostgreSQL run in isolated containers via Docker Compose
 
 ---
 
@@ -27,8 +27,8 @@ Designed, implemented, tested, documented, and maintained end to end.
 ```mermaid
 graph TD
     A["OpenWeatherMap REST API\n15 cities · 5-day forecast · 3-hour intervals"] --> B["Python Ingestion Layer\nclient · extract · transform · load"]
-    B --> C["CSV Landing Zone\ndata/raw/ · immutable source record · S3"]
-    C --> D["PostgreSQL · raw.weather_forecast · AWS RDS\nrow count validation · volume anomaly check"]
+    B --> C["CSV Landing Zone\ndata/raw/ · immutable source record"]
+    C --> D["PostgreSQL · raw.weather_forecast\nrow count validation · volume anomaly check"]
     D --> E["dbt Staging\nstg_weather__forecast\ntype casting · deduplication · UTC normalization"]
     E --> F["dbt Intermediate\nint_weather_enriched\nderived categories"]
     F --> G["dbt Marts\ndim_city · fct_weather_forecast · fct_weather_daily"]
@@ -83,9 +83,8 @@ This pipeline is designed around operational reliability, not just data transfor
 |---|---|
 | Orchestration | Apache Airflow |
 | Transformation | dbt (dbt-postgres) |
-| Warehouse | PostgreSQL · AWS RDS |
-| Storage | AWS S3 |
-| Compute | AWS EC2 · Docker · Docker Compose |
+| Warehouse | PostgreSQL |
+| Compute | Docker · Docker Compose |
 | Language | Python · SQL |
 | Libraries | pandas · SQLAlchemy · psycopg2 · pytest |
 | CI/CD | GitHub Actions |
@@ -337,13 +336,15 @@ cp .env.example .env
 ```
 
 ```
-OPENWEATHER_API_KEY=your_api_key_here
+OPENWEATHER_API_KEY=<your key from openweathermap.org>
 WAREHOUSE_USER=weather_user
 WAREHOUSE_PASSWORD=weather_pass
 WAREHOUSE_DB=weather_db
 WAREHOUSE_HOST=postgres-warehouse
 WAREHOUSE_PORT=5432
 ```
+
+Only `OPENWEATHER_API_KEY` needs to be changed — all other values match the Docker Compose defaults and can be left as-is.
 
 Also set `AIRFLOW_UID` to your host user's UID, so files the containers create (logs, dbt artifacts, raw CSVs) end up owned by you instead of a fixed container UID — this is Airflow's own documented setup step, not specific to this repo:
 
@@ -374,7 +375,7 @@ docker compose exec airflow-scheduler airflow dags unpause weather_forecast_pipe
 
 ### Create the Airflow Connection
 
-After the containers are healthy, register the warehouse connection so Airflow can resolve credentials at runtime:
+After the containers are healthy, register the warehouse connection so Airflow can resolve credentials at runtime. This is a one-time step — the connection persists until the containers are torn down with `docker compose down -v`.
 
 ```bash
 docker compose exec airflow-scheduler airflow connections add weather_warehouse \
@@ -398,7 +399,7 @@ docker compose exec airflow-scheduler airflow connections add weather_warehouse 
     --conn-port 5432
 ```
 
-The `postgres_loader.py` module tries this connection first and falls back to the `.env` environment variables if the connection is not found — so the pipeline still works locally without Docker.
+If the connection is not found at runtime, `postgres_loader.py` falls back to the `.env` variables automatically.
 
 ---
 

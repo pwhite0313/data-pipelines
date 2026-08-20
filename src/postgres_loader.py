@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import io
 import os
-import re
 from pathlib import Path
 from datetime import datetime, timezone
 import logging
@@ -18,14 +16,6 @@ from src.utils import RAW_DATA_DIR
 RAW_SCHEMA = "raw"
 RAW_TABLE = "weather_forecast"
 
-# Fields the API only includes conditionally (e.g. snow_3h is absent from the
-# response entirely when no city has snow in the forecast). If the first CSV
-# ever loaded happens to lack one of these, pandas' to_sql would infer a table
-# schema missing the column — so we force it present (as null) on every load.
-KNOWN_OPTIONAL_COLUMNS = {
-    "snow_3h": "float64",
-}
-
 setup_logging()
 logger = logging.getLogger(__name__)
 
@@ -36,7 +26,7 @@ def get_engine() -> Engine:
         conn = BaseHook.get_connection("weather_warehouse")
         db_url = f"postgresql+psycopg2://{conn.login}:{conn.password}@{conn.host}:{conn.port}/{conn.schema}"
         logger.info("Built database URL from Airflow connection: weather_warehouse")
-        return create_engine(db_url, connect_args={"sslmode": "prefer"})
+        return create_engine(db_url)
     except Exception:
         logger.info("Airflow connection not available — falling back to environment variables")
 
@@ -59,27 +49,18 @@ def get_engine() -> Engine:
         db_url = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
         logger.info("Built database URL from individual environment variables")
 
-    return create_engine(db_url, connect_args={"sslmode": "prefer"})
-
-
-def _read_csv(file_path: str) -> pd.DataFrame:
-    if file_path.startswith("s3://"):
-        import boto3
-        parts = file_path[5:].split("/", 1)
-        bucket, key = parts[0], parts[1]
-        response = boto3.client("s3").get_object(Bucket=bucket, Key=key)
-        return pd.read_csv(io.BytesIO(response["Body"].read()))
-    return pd.read_csv(file_path)
+    logger.info("Creating database engine")
+    return create_engine(db_url)
 
 
 def parse_source_file_ts(file_name: str) -> datetime:
     stem = Path(file_name).stem
 
-    match = re.match(r"output_(\d{8}_\d{6})", stem)
-    if not match:
+    if not stem.startswith("output_"):
         raise ValueError(f"Unexpected file name format: {file_name}")
 
-    return datetime.strptime(match.group(1), "%Y%m%d_%H%M%S")
+    ts_part = stem.replace("output_", "", 1)
+    return datetime.strptime(ts_part, "%Y%m%d_%H%M%S")
 
 
 def ensure_raw_schema(engine: Engine) -> None:
@@ -149,17 +130,15 @@ def load_file(
     logger.info("Input file path: %s", file_path)
     logger.info("DAG run ID: %s", dag_run_id)
 
-    is_s3 = file_path.startswith("s3://")
-    source_file_name = file_path.rsplit("/", 1)[-1]
+    path = Path(file_path)
 
-    if not is_s3:
-        path = Path(file_path)
-        if not path.exists():
-            logger.error("File not found: %s", file_path)
-            raise FileNotFoundError(f"File not found: {file_path}")
+    if not path.exists():
+        logger.error("File not found: %s", file_path)
+        raise FileNotFoundError(f"File not found: {file_path}")
 
     engine = get_engine()
     ensure_raw_schema(engine)
+    source_file_name = path.name
     source_file_ts = parse_source_file_ts(source_file_name)
 
     logger.info("Source file name: %s", source_file_name)
@@ -171,17 +150,13 @@ def load_file(
         return message
 
     logger.info("Reading CSV")
-    df = _read_csv(file_path)
+    df = pd.read_csv(path)
     logger.info("Rows read from CSV: %s", len(df))
 
     df["source_file_name"] = source_file_name
     df["source_file_ts"] = source_file_ts
     df["ingested_at"] = datetime.now(timezone.utc).replace(tzinfo=None)
     df["dag_run_id"] = dag_run_id
-
-    for column, dtype in KNOWN_OPTIONAL_COLUMNS.items():
-        if column not in df.columns:
-            df[column] = pd.Series([None] * len(df), dtype=dtype)
 
     df = align_columns_to_table(engine, df)
     logger.info("Writing rows to %s.%s", RAW_SCHEMA, RAW_TABLE)
@@ -206,29 +181,17 @@ def load_all_files(dag_run_id: str | None = None) -> list[str]:
     if dag_run_id == "":
         dag_run_id = None
 
-    bucket = os.getenv("S3_BUCKET")
+    csv_files = sorted(RAW_DATA_DIR.glob("output_*.csv"))
 
-    if bucket:
-        import boto3
-        response = boto3.client("s3").list_objects_v2(Bucket=bucket, Prefix="raw/output_")
-        if "Contents" not in response:
-            raise FileNotFoundError(f"No output CSV files found in s3://{bucket}/raw/")
-        file_paths = sorted([
-            f"s3://{bucket}/{obj['Key']}"
-            for obj in response["Contents"]
-            if obj["Key"].endswith(".csv")
-        ])
-    else:
-        csv_files = sorted(RAW_DATA_DIR.glob("output_*.csv"))
-        if not csv_files:
-            raise FileNotFoundError(f"No output CSV files found in {RAW_DATA_DIR}")
-        file_paths = [str(f) for f in csv_files]
+    if not csv_files:
+        raise FileNotFoundError(f"No output CSV files found in {RAW_DATA_DIR}")
 
     results = []
-    for file_path in file_paths:
+
+    for file_path in csv_files:
         try:
             logger.info("Loading file: %s", file_path)
-            result = load_file(file_path=file_path, dag_run_id=dag_run_id)
+            result = load_file(file_path=str(file_path), dag_run_id=dag_run_id)
             results.append(result)
         except Exception:
             logger.exception("Failed on file: %s", file_path)
