@@ -1,8 +1,6 @@
 # Weather Data ELT Pipeline
 
-Production-style ELT pipeline that ingests live weather forecast data from the OpenWeatherMap REST API across 15 global cities, validates and transforms it using dbt, and delivers analytics-ready dimensional models through a fully automated workflow built with Python, Apache Airflow, PostgreSQL, Docker, and GitHub Actions.
-
-Designed, implemented, tested, documented, and maintained end to end.
+ELT pipeline that pulls live weather forecast data from the OpenWeatherMap API across 15 cities, loads it into PostgreSQL, and transforms it into analytics-ready models using dbt — all orchestrated by Airflow running in Docker. Built to practice the kind of reliability and operational detail that matters in production: idempotent loads, data quality gates, schema drift handling, and CI via GitHub Actions.
 
 ---
 
@@ -48,32 +46,11 @@ graph TD
 
 ---
 
-## Engineering Metrics
+## Quality and Reliability
 
-| Metric | Value |
-|---|---|
-| Cities monitored | 15 across 4 continents |
-| Pipeline schedule | Daily (`@daily` Airflow schedule) |
-| dbt models | 6 across 4 layers |
-| dbt schema tests | 49 |
-| Pytest unit tests | 19 |
-| Volume anomaly baseline | 7-run rolling average |
-| Data quality gates | 3 (row count · anomaly check · dbt tests) |
+The pipeline runs three data quality checks before dbt ever touches the data: a row count validation, a volume anomaly check (current run compared against a 7-run rolling average), and dbt schema tests on the way out. If any of them fail, the run stops there.
 
----
-
-## Production Engineering
-
-This pipeline is designed around operational reliability, not just data transformation.
-
-- **Automated scheduling** — Airflow DAG runs daily with no manual intervention required
-- **Fail-loud design** — Tasks fail at the point of failure; bad data never reaches downstream models
-- **Three data quality gates** — Row count validation, volume anomaly detection, and dbt schema tests run in sequence before marts are updated
-- **Full lineage** — Every row carries `source_file_name`, `ingested_at`, and `dag_run_id` metadata for end-to-end traceability
-- **Schema drift handling** — Unknown API fields are detected, dropped, and logged at load time; pipeline continues without human intervention
-- **Backfill support** — Idempotent loads allow missed runs to be replayed without duplicates
-- **CI/CD** — GitHub Actions runs the full pytest suite on every push before code reaches the production environment
-- **Documentation** — Architectural diagrams, data dictionary, schema specs, and an incident log maintained throughout development
+Every row in the warehouse carries `source_file_name`, `ingested_at`, and `dag_run_id` — enough to trace any row back to the exact API call that produced it. Loads are idempotent, so backfilling a missed run or retrying a failed one is safe without cleanup. The 6 dbt models have 49 schema tests across uniqueness, not-null, range, and referential integrity checks. There are also 19 pytest unit tests covering transform logic, schema enforcement, and timestamp parsing, run automatically on every push via GitHub Actions.
 
 ---
 
@@ -259,13 +236,6 @@ Shared fixtures live in `conftest.py`. The CI workflow in `.github/workflows/ci.
 
 ---
 
-## Engineering Takeaways
-
-- **Idempotency is not optional.** A pipeline that cannot be safely replayed is not production-ready. Filename-keyed deduplication and `NOT EXISTS` anti-joins made backfill and retry trivial to reason about.
-- **Validate before transforming.** Catching bad data at the ingestion boundary — through row count checks, anomaly detection, and schema enforcement — is cheaper than remediating corrupt downstream models after the fact.
-- **Documentation is a first-class artifact.** Maintaining a data dictionary, architectural diagrams, and an incident log throughout the build made the system easier to operate and debug, not just easier to explain.
-
----
 
 ## Known Limitations
 
